@@ -1,0 +1,24 @@
+{
+  "auth": {
+    "login": {
+      "title": "Аккаунтқа кіру",
+      "email": "Электрондық пошта",
+      "password": "Құпия сөз",
+      "remember": "Мені есте сақта",
+      "submit": "Кіру",
+      "emailPlaceholder": "email@example.com",
+      "passwordPlaceholder": "Құпия сөз"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Басқару панелі",
+    "examTypes": "Емтихан түрлері",
+    "exams": "Емтихандар",
+    "applicants": "Түлектер",
+    "users": "Пайдаланушылар"
+  },
+  "userMenu": {
+    "settings": "Баптаулар",
+    "logout": "Шығу"
+  }
+}

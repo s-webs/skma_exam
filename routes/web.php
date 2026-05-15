@@ -12,8 +12,20 @@ use Inertia\Inertia;
 
 // Public routes
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    if (auth()->check()) {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('login');
 })->name('home');
+
+// Language switcher
+Route::post('/locale', function (Illuminate\Http\Request $request) {
+    $locale = $request->input('locale');
+    if (in_array($locale, ['ru', 'kk', 'en'])) {
+        $request->session()->put('locale', $locale);
+    }
+    return back();
+})->name('locale.set');
 
 // Public registration routes
 Route::get('/register/{slug}', [RegistrationController::class, 'index'])->name('public.registration.index');

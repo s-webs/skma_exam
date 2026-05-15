@@ -36,8 +36,12 @@ interface ExamTypesIndexProps {
 }
 
 export default function Index({ examTypes }: ExamTypesIndexProps) {
-    const handleDelete = (id: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот тип экзамена?')) {
+    const handleDelete = (id: number, examsCount: number) => {
+        const message = examsCount > 0
+            ? `Вы уверены, что хотите удалить этот тип экзамена? Будут удалены все ${examsCount} привязанных экзаменов и их данные.`
+            : 'Вы уверены, что хотите удалить этот тип экзамена?';
+
+        if (confirm(message)) {
             router.delete(route('admin.exam-types.destroy', id));
         }
     };
@@ -140,8 +144,7 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            onClick={() => handleDelete(examType.id)}
-                                                            disabled={examType.exams_count > 0}
+                                                            onClick={() => handleDelete(examType.id, examType.exams_count)}
                                                         >
                                                             <Trash2 className="h-4 w-4 text-red-600" />
                                                         </Button>

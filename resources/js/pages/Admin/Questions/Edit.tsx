@@ -1,6 +1,6 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { FormEvent, useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 interface Answer {
     id?: number;
     content: string;
+    image_path?: string | null;
+    image?: File | null;
     is_correct: boolean;
 }
 
@@ -49,6 +52,20 @@ export default function Edit({ question }: EditProps) {
         setData('answers', answers);
     }, [answers]);
 
+    useEffect(() => {
+        if (Object.keys(errors).length > 0) {
+            Object.values(errors).forEach((error) => {
+                toast.error(error, {
+                    style: {
+                        background: '#fef2f2',
+                        border: '2px solid #fca5a5',
+                        color: '#7f1d1d',
+                    },
+                });
+            });
+        }
+    }, [errors]);
+
     const addAnswer = () => {
         if (answers.length < 6) {
             setAnswers([...answers, { content: '', is_correct: false }]);
@@ -61,7 +78,7 @@ export default function Edit({ question }: EditProps) {
         }
     };
 
-    const updateAnswer = (index: number, field: 'content' | 'is_correct', value: string | boolean) => {
+    const updateAnswer = (index: number, field: 'content' | 'is_correct' | 'image', value: string | boolean | File | null) => {
         const newAnswers = [...answers];
         newAnswers[index] = { ...newAnswers[index], [field]: value };
         setAnswers(newAnswers);
@@ -69,7 +86,32 @@ export default function Edit({ question }: EditProps) {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        post(route('admin.questions.update', question.id));
+
+        const formData = new FormData();
+        formData.append('content', data.content);
+        formData.append('explanation', data.explanation);
+        formData.append('is_active', data.is_active ? '1' : '0');
+        formData.append('_method', 'PUT');
+
+        if (data.image) {
+            formData.append('image', data.image);
+        }
+
+        answers.forEach((answer, index) => {
+            formData.append(`answers[${index}][content]`, answer.content);
+            formData.append(`answers[${index}][is_correct]`, answer.is_correct ? '1' : '0');
+            if (answer.id) {
+                formData.append(`answers[${index}][id]`, answer.id.toString());
+            }
+            if (answer.image) {
+                formData.append(`answers[${index}][image]`, answer.image);
+            }
+        });
+
+        post(route('admin.questions.update', question.id), {
+            data: formData,
+            forceFormData: true,
+        });
     };
 
     return (
@@ -102,8 +144,8 @@ export default function Edit({ question }: EditProps) {
                                         id="content"
                                         value={data.content}
                                         onChange={(e) => setData('content', e.target.value)}
-                                        required
                                         rows={4}
+                                        placeholder="Введите текст вопроса или загрузите изображение"
                                     />
                                     {errors.content && (
                                         <p className="text-sm text-red-600">{errors.content}</p>
@@ -111,22 +153,37 @@ export default function Edit({ question }: EditProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="image">Изображение</Label>
+                                    <Label htmlFor="image">Изображение вопроса (необязательно)</Label>
                                     {question.image_path && (
                                         <div className="mb-2">
                                             <img
-                                                src={`/storage/${question.image_path}`}
+                                                src={`/storage/questions/${question.image_path}`}
                                                 alt="Question"
                                                 className="max-w-xs rounded border"
                                             />
                                         </div>
                                     )}
-                                    <Input
-                                        id="image"
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => setData('image', e.target.files?.[0] || null)}
-                                    />
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            id="image"
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => setData('image', e.target.files?.[0] || null)}
+                                            className="hidden"
+                                        />
+                                        <label
+                                            htmlFor="image"
+                                            className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                                        >
+                                            <ImageIcon className="h-4 w-4" />
+                                            {data.image ? data.image.name : 'Выбрать изображение'}
+                                        </label>
+                                        {data.image && (
+                                            <span className="text-sm text-muted-foreground">
+                                                Файл выбран
+                                            </span>
+                                        )}
+                                    </div>
                                     {errors.image && (
                                         <p className="text-sm text-red-600">{errors.image}</p>
                                     )}
@@ -172,41 +229,63 @@ export default function Edit({ question }: EditProps) {
                                     </div>
 
                                     {answers.map((answer, index) => (
-                                        <div key={index} className="flex gap-2 items-start">
-                                            <div className="flex-1 space-y-2">
+                                        <div key={index} className="space-y-2 rounded-lg border p-4">
+                                            {(answer.image_path || answer.image) && (
+                                                <div className="mb-2">
+                                                    <img
+                                                        src={answer.image ? URL.createObjectURL(answer.image) : `/storage/answers/${answer.image_path}`}
+                                                        alt={`Answer ${index + 1}`}
+                                                        className="max-w-xs rounded border"
+                                                    />
+                                                </div>
+                                            )}
+                                            <div className="flex gap-2 items-center">
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => updateAnswer(index, 'image', e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                    id={`answer-image-${index}`}
+                                                />
+                                                <label
+                                                    htmlFor={`answer-image-${index}`}
+                                                    className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
+                                                    title="Добавить изображение"
+                                                >
+                                                    <ImageIcon className="h-5 w-5" />
+                                                </label>
                                                 <Input
                                                     value={answer.content}
                                                     onChange={(e) => updateAnswer(index, 'content', e.target.value)}
-                                                    placeholder={`Вариант ответа ${index + 1}`}
-                                                    required
+                                                    placeholder={`Вариант ответа ${index + 1} (текст или изображение)`}
+                                                    className="flex-1"
                                                 />
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`correct-${index}`}
+                                                        checked={answer.is_correct}
+                                                        onCheckedChange={(checked) =>
+                                                            updateAnswer(index, 'is_correct', checked as boolean)
+                                                        }
+                                                    />
+                                                    <Label
+                                                        htmlFor={`correct-${index}`}
+                                                        className="cursor-pointer text-sm whitespace-nowrap"
+                                                    >
+                                                        Правильный
+                                                    </Label>
+                                                </div>
+                                                {answers.length > 2 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => removeAnswer(index)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-red-600" />
+                                                    </Button>
+                                                )}
                                             </div>
-                                            <div className="flex items-center space-x-2 pt-2">
-                                                <Checkbox
-                                                    id={`correct-${index}`}
-                                                    checked={answer.is_correct}
-                                                    onCheckedChange={(checked) =>
-                                                        updateAnswer(index, 'is_correct', checked as boolean)
-                                                    }
-                                                />
-                                                <Label
-                                                    htmlFor={`correct-${index}`}
-                                                    className="cursor-pointer text-sm"
-                                                >
-                                                    Правильный
-                                                </Label>
-                                            </div>
-                                            {answers.length > 2 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => removeAnswer(index)}
-                                                    className="mt-0"
-                                                >
-                                                    <Trash2 className="h-4 w-4 text-red-600" />
-                                                </Button>
-                                            )}
                                         </div>
                                     ))}
                                     {errors.answers && (

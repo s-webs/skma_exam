@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\Question;
+use App\Services\ImageOptimizationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
@@ -35,13 +36,26 @@ class QuestionController extends Controller
     public function store(Request $request, Exam $exam)
     {
         $validated = $request->validate([
-            'content' => 'required|string',
+            'content' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'explanation' => 'nullable|string',
             'answers' => 'required|array|min:2|max:6',
-            'answers.*.content' => 'required|string',
+            'answers.*.content' => 'nullable|string',
+            'answers.*.image' => 'nullable|image|max:2048',
             'answers.*.is_correct' => 'required|boolean',
         ]);
+
+        // Проверяем что у вопроса есть либо текст либо изображение
+        if (empty($validated['content']) && !$request->hasFile('image')) {
+            return back()->withErrors(['content' => 'Необходимо заполнить текст вопроса или загрузить изображение']);
+        }
+
+        // Проверяем что у каждого ответа есть либо текст либо изображение
+        foreach ($validated['answers'] as $index => $answer) {
+            if (empty($answer['content']) && !$request->hasFile("answers.{$index}.image")) {
+                return back()->withErrors(["answers.{$index}.content" => "Ответ " . ($index + 1) . ": необходимо заполнить текст или загрузить изображение"]);
+            }
+        }
 
         // Проверяем что есть хотя бы один правильный ответ
         $hasCorrectAnswer = collect($validated['answers'])->contains('is_correct', true);
@@ -50,7 +64,7 @@ class QuestionController extends Controller
         }
 
         $question = $exam->questions()->create([
-            'content' => $validated['content'],
+            'content' => $validated['content'] ?? '',
             'explanation' => $validated['explanation'] ?? null,
             'is_active' => true,
             'created_by_user_id' => auth()->id(),
@@ -58,17 +72,30 @@ class QuestionController extends Controller
 
         // Загрузка изображения если есть
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('questions', 'public');
-            $question->update(['image_path' => $path]);
+            $imageService = app(ImageOptimizationService::class);
+            $filename = $imageService->optimizeAndStore($request->file('image'), 'questions');
+            $question->update(['image_path' => $filename]);
         }
 
         // Создаем ответы
-        foreach ($validated['answers'] as $answerData) {
-            $question->answers()->create([
-                'content' => $answerData['content'],
+        foreach ($validated['answers'] as $index => $answerData) {
+            $createData = [
+                'content' => $answerData['content'] ?? '',
                 'is_correct' => $answerData['is_correct'],
                 'created_by_user_id' => auth()->id(),
-            ]);
+            ];
+
+            // Обрабатываем загрузку изображения для ответа
+            if ($request->hasFile("answers.{$index}.image")) {
+                $imageService = app(ImageOptimizationService::class);
+                $filename = $imageService->optimizeAndStore(
+                    $request->file("answers.{$index}.image"),
+                    'answers'
+                );
+                $createData['image_path'] = $filename;
+            }
+
+            $question->answers()->create($createData);
         }
 
         return redirect()->route('admin.exams.questions.index', $exam)
@@ -87,15 +114,31 @@ class QuestionController extends Controller
     public function update(Request $request, Question $question)
     {
         $validated = $request->validate([
-            'content' => 'required|string',
+            'content' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'explanation' => 'nullable|string',
             'is_active' => 'boolean',
             'answers' => 'required|array|min:2|max:6',
             'answers.*.id' => 'nullable|exists:answers,id',
-            'answers.*.content' => 'required|string',
+            'answers.*.content' => 'nullable|string',
+            'answers.*.image' => 'nullable|image|max:2048',
             'answers.*.is_correct' => 'required|boolean',
         ]);
+
+        // Проверяем что у вопроса есть либо текст либо изображение
+        if (empty($validated['content']) && !$request->hasFile('image') && !$question->image_path) {
+            return back()->withErrors(['content' => 'Необходимо заполнить текст вопроса или загрузить изображение']);
+        }
+
+        // Проверяем что у каждого ответа есть либо текст либо изображение
+        foreach ($validated['answers'] as $index => $answerData) {
+            $existingAnswer = isset($answerData['id']) ? $question->answers()->find($answerData['id']) : null;
+            $hasExistingImage = $existingAnswer && $existingAnswer->image_path;
+
+            if (empty($answerData['content']) && !$request->hasFile("answers.{$index}.image") && !$hasExistingImage) {
+                return back()->withErrors(["answers.{$index}.content" => "Ответ " . ($index + 1) . ": необходимо заполнить текст или загрузить изображение"]);
+            }
+        }
 
         $hasCorrectAnswer = collect($validated['answers'])->contains('is_correct', true);
         if (!$hasCorrectAnswer) {
@@ -103,34 +146,72 @@ class QuestionController extends Controller
         }
 
         $question->update([
-            'content' => $validated['content'],
+            'content' => $validated['content'] ?? '',
             'explanation' => $validated['explanation'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
+        // Обрабатываем загрузку изображения вопроса
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('questions', 'public');
-            $question->update(['image_path' => $path]);
+            $imageService = app(ImageOptimizationService::class);
+            $filename = $imageService->optimizeAndStore($request->file('image'), 'questions');
+
+            // Удаляем старое изображение
+            if ($question->image_path) {
+                $imageService->deleteOldImage($question->image_path, 'questions');
+            }
+
+            $question->update(['image_path' => $filename]);
         }
 
         // Обновляем ответы
         $existingAnswerIds = [];
-        foreach ($validated['answers'] as $answerData) {
+        foreach ($validated['answers'] as $index => $answerData) {
             if (isset($answerData['id'])) {
                 $answer = $question->answers()->find($answerData['id']);
                 if ($answer) {
-                    $answer->update([
+                    $updateData = [
                         'content' => $answerData['content'],
                         'is_correct' => $answerData['is_correct'],
-                    ]);
+                    ];
+
+                    // Обрабатываем загрузку изображения для ответа
+                    if ($request->hasFile("answers.{$index}.image")) {
+                        $imageService = app(ImageOptimizationService::class);
+                        $filename = $imageService->optimizeAndStore(
+                            $request->file("answers.{$index}.image"),
+                            'answers'
+                        );
+
+                        // Удаляем старое изображение
+                        if ($answer->image_path) {
+                            $imageService->deleteOldImage($answer->image_path, 'answers');
+                        }
+
+                        $updateData['image_path'] = $filename;
+                    }
+
+                    $answer->update($updateData);
                     $existingAnswerIds[] = $answer->id;
                 }
             } else {
-                $newAnswer = $question->answers()->create([
-                    'content' => $answerData['content'],
+                $createData = [
+                    'content' => $answerData['content'] ?? '',
                     'is_correct' => $answerData['is_correct'],
                     'created_by_user_id' => auth()->id(),
-                ]);
+                ];
+
+                // Обрабатываем загрузку изображения для нового ответа
+                if ($request->hasFile("answers.{$index}.image")) {
+                    $imageService = app(ImageOptimizationService::class);
+                    $filename = $imageService->optimizeAndStore(
+                        $request->file("answers.{$index}.image"),
+                        'answers'
+                    );
+                    $createData['image_path'] = $filename;
+                }
+
+                $newAnswer = $question->answers()->create($createData);
                 $existingAnswerIds[] = $newAnswer->id;
             }
         }

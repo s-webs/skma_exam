@@ -1,0 +1,24 @@
+{
+  "auth": {
+    "login": {
+      "title": "Log in to your account",
+      "email": "Email address",
+      "password": "Password",
+      "remember": "Remember me",
+      "submit": "Log in",
+      "emailPlaceholder": "email@example.com",
+      "passwordPlaceholder": "Password"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "examTypes": "Exam Types",
+    "exams": "Exams",
+    "applicants": "Applicants",
+    "users": "Users"
+  },
+  "userMenu": {
+    "settings": "Settings",
+    "logout": "Log out"
+  }
+}

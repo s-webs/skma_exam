@@ -1,0 +1,24 @@
+{
+  "auth": {
+    "login": {
+      "title": "Войдите в свой аккаунт",
+      "email": "Электронная почта",
+      "password": "Пароль",
+      "remember": "Запомнить меня",
+      "submit": "Войти",
+      "emailPlaceholder": "email@example.com",
+      "passwordPlaceholder": "Пароль"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Панель управления",
+    "examTypes": "Типы экзаменов",
+    "exams": "Экзамены",
+    "applicants": "Абитуриенты",
+    "users": "Пользователи"
+  },
+  "userMenu": {
+    "settings": "Настройки",
+    "logout": "Выйти"
+  }
+}

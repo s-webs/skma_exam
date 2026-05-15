@@ -1,4 +1,5 @@
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from '@/components/ui/sonner';
 import { useState } from 'react';
 
 interface AppShellProps {
@@ -18,12 +19,18 @@ export function AppShell({ children, variant = 'header' }: AppShellProps) {
     };
 
     if (variant === 'header') {
-        return <div className="flex min-h-screen w-full flex-col">{children}</div>;
+        return (
+            <div className="flex min-h-screen w-full flex-col">
+                {children}
+                <Toaster position="top-right" />
+            </div>
+        );
     }
 
     return (
         <SidebarProvider defaultOpen={isOpen} open={isOpen} onOpenChange={handleSidebarChange}>
             {children}
+            <Toaster position="top-right" />
         </SidebarProvider>
     );
 }

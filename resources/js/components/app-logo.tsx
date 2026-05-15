@@ -1,14 +1,32 @@
-import AppLogoIcon from './app-logo-icon';
+import { useSidebar } from '@/components/ui/sidebar';
 
 export default function AppLogo() {
+    const { state } = useSidebar();
+    const isCollapsed = state === 'collapsed';
+
     return (
-        <>
-            <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md">
-                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+        <div className="w-full py-6 overflow-hidden relative">
+            <div
+                className="flex transition-transform duration-300 ease-in-out"
+                style={{ transform: isCollapsed ? 'translateX(-100%)' : 'translateX(0)' }}
+            >
+                {/* Большой логотип */}
+                <div className="w-full flex-shrink-0 px-4 flex items-center justify-center" style={{ height: '63px' }}>
+                    <img
+                        src="/assets/images/skma-exam-logo.svg"
+                        alt="SKMA Exam Logo"
+                        className="w-full h-full object-contain"
+                    />
+                </div>
+                {/* Маленький логотип */}
+                <div className="w-full flex-shrink-0 flex items-center justify-center" style={{ height: '63px' }}>
+                    <img
+                        src="/assets/images/skma-small-logo.svg"
+                        alt="SKMA Logo"
+                        className="w-full h-full object-contain"
+                    />
+                </div>
             </div>
-            <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-none font-semibold">Laravel Starter Kit</span>
-            </div>
-        </>
+        </div>
     );
 }

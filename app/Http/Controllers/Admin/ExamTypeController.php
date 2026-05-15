@@ -70,10 +70,6 @@ class ExamTypeController extends Controller
 
     public function destroy(ExamType $examType)
     {
-        if ($examType->exams()->count() > 0) {
-            return back()->with('error', 'Невозможно удалить тип экзамена с существующими экзаменами');
-        }
-
         $examType->delete();
 
         return redirect()->route('admin.exam-types.index')

@@ -87,6 +87,7 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-16">#</TableHead>
                                         <TableHead>Вопрос</TableHead>
                                         <TableHead>Ответов</TableHead>
                                         <TableHead>Правильных</TableHead>
@@ -97,15 +98,18 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                                 <TableBody>
                                     {questions.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center">
+                                            <TableCell colSpan={6} className="text-center">
                                                 Вопросы не найдены
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        questions.map((question) => {
+                                        questions.map((question, index) => {
                                             const correctAnswers = question.answers.filter(a => a.is_correct).length;
                                             return (
                                                 <TableRow key={question.id}>
+                                                    <TableCell className="font-mono text-muted-foreground">
+                                                        {index + 1}
+                                                    </TableCell>
                                                     <TableCell className="max-w-md">
                                                         <div className="truncate font-medium">
                                                             {question.content}

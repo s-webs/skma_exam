@@ -4,63 +4,49 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, FileText, Users, ClipboardList, UserCheck } from 'lucide-react';
+import { LayoutGrid, FileText, Users, ClipboardList, UserCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        url: '/admin/dashboard',
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Типы экзаменов',
-        url: '/admin/exam-types',
-        icon: FileText,
-    },
-    {
-        title: 'Экзамены',
-        url: '/admin/exams',
-        icon: ClipboardList,
-    },
-    {
-        title: 'Абитуриенты',
-        url: '/admin/applicants',
-        icon: UserCheck,
-    },
-    {
-        title: 'Пользователи',
-        url: '/admin/users',
-        icon: Users,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        url: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        url: 'https://laravel.com/docs/starter-kits',
-        icon: BookOpen,
-    },
-];
+const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
+    const { t } = useTranslation();
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: t('sidebar.dashboard'),
+            url: '/admin/dashboard',
+            icon: LayoutGrid,
+        },
+        {
+            title: t('sidebar.examTypes'),
+            url: '/admin/exam-types',
+            icon: FileText,
+        },
+        {
+            title: t('sidebar.exams'),
+            url: '/admin/exams',
+            icon: ClipboardList,
+        },
+        {
+            title: t('sidebar.applicants'),
+            url: '/admin/applicants',
+            icon: UserCheck,
+        },
+        {
+            title: t('sidebar.users'),
+            url: '/admin/users',
+            icon: Users,
+        },
+    ];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href="/admin/dashboard" prefetch>
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <Link href="/admin/dashboard" prefetch>
+                    <AppLogo />
+                </Link>
             </SidebarHeader>
 
             <SidebarContent>
