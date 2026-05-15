@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Pencil, Trash2, Settings, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,69 +44,71 @@ interface ExamsIndexProps {
 }
 
 export default function Index({ exams }: ExamsIndexProps) {
+    const { t } = useTranslation();
+
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот экзамен?')) {
+        if (confirm(t('exams.deleteConfirm'))) {
             router.delete(route('admin.exams.destroy', id));
         }
     };
 
     const getLanguageName = (lang: string) => {
         const languages: Record<string, string> = {
-            kz: 'Казахский',
-            ru: 'Русский',
-            en: 'Английский',
+            kz: t('exams.kazakh'),
+            ru: t('exams.russian'),
+            en: t('exams.english'),
         };
         return languages[lang] || lang;
     };
 
     return (
         <AppLayout>
-            <Head title="Экзамены" />
+            <Head title={t('exams.title')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Экзамены</h2>
+                            <h2 className="text-3xl font-bold tracking-tight">{t('exams.title')}</h2>
                             <p className="text-muted-foreground mt-2">
-                                Управление экзаменами и их настройками
+                                {t('exams.description')}
                             </p>
                         </div>
                         <Link href={route('admin.exams.create')}>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Создать экзамен
+                                {t('exams.createExam')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Все экзамены</CardTitle>
+                            <CardTitle>{t('exams.allExams')}</CardTitle>
                             <CardDescription>
-                                Всего: {exams.length} экзаменов
+                                {t('exams.total', { count: exams.length })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Название</TableHead>
-                                        <TableHead>Тип</TableHead>
-                                        <TableHead>Язык</TableHead>
-                                        <TableHead>Время</TableHead>
-                                        <TableHead>Вопросов</TableHead>
-                                        <TableHead>Проходной балл</TableHead>
-                                        <TableHead>Статус</TableHead>
-                                        <TableHead>Абитуриенты</TableHead>
-                                        <TableHead className="text-right">Действия</TableHead>
+                                        <TableHead>{t('exams.name')}</TableHead>
+                                        <TableHead>{t('exams.type')}</TableHead>
+                                        <TableHead>{t('exams.language')}</TableHead>
+                                        <TableHead>{t('exams.time')}</TableHead>
+                                        <TableHead>{t('exams.questions')}</TableHead>
+                                        <TableHead>{t('exams.passingScore')}</TableHead>
+                                        <TableHead>{t('exams.status')}</TableHead>
+                                        <TableHead>{t('exams.applicants')}</TableHead>
+                                        <TableHead className="text-right">{t('exams.actions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {exams.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={9} className="text-center">
-                                                Экзамены не найдены
+                                                {t('exams.noExams')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -114,7 +117,7 @@ export default function Index({ exams }: ExamsIndexProps) {
                                                 <TableCell className="font-medium">{exam.name}</TableCell>
                                                 <TableCell>{exam.exam_type.name}</TableCell>
                                                 <TableCell>{getLanguageName(exam.language)}</TableCell>
-                                                <TableCell>{exam.duration_minutes} мин</TableCell>
+                                                <TableCell>{exam.duration_minutes} {t('exams.minutes')}</TableCell>
                                                 <TableCell>
                                                     {exam.questions_count_total} / {exam.questions_count}
                                                 </TableCell>
@@ -127,21 +130,21 @@ export default function Index({ exams }: ExamsIndexProps) {
                                                                 : 'bg-gray-100 text-gray-800'
                                                         }
                                                     >
-                                                        {exam.is_active ? 'Активен' : 'Неактивен'}
+                                                        {exam.is_active ? t('exams.active') : t('exams.inactive')}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Link href={route('admin.exams.applicants', exam.id)}>
                                                         <Button variant="outline" size="sm">
                                                             <Users className="mr-2 h-4 w-4" />
-                                                            Список
+                                                            {t('exams.list')}
                                                         </Button>
                                                     </Link>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <Link href={route('admin.exams.questions.index', exam.id)}>
-                                                            <Button variant="outline" size="sm" title="Вопросы">
+                                                            <Button variant="outline" size="sm" title={t('exams.questionsTitle')}>
                                                                 <Settings className="h-4 w-4" />
                                                             </Button>
                                                         </Link>

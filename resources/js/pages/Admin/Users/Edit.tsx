@@ -7,44 +7,46 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Role {
     id: number;
     name: string;
 }
 
-interface CreateProps {
+interface User {
+    id: number;
+    name: string;
+    email: string;
     roles: Role[];
 }
 
-export default function Create({ roles }: CreateProps) {
+interface EditProps {
+    user: User;
+    roles: Role[];
+}
+
+export default function Edit({ user, roles }: EditProps) {
     const { t } = useTranslation();
-    const { data, setData, post, processing, errors } = useForm({
-        name: '',
-        email: '',
+    const { data, setData, put, processing, errors } = useForm({
+        name: user.name,
+        email: user.email,
         password: '',
         password_confirmation: '',
-        role: 'registrator',
+        role: user.roles[0]?.name || '',
     });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        post(route('admin.users.store'));
+        put(route('admin.users.update', user.id));
     };
 
     return (
         <AppLayout>
-            <Head title={t('users.createTitle')} />
+            <Head title={t('users.editTitle')} />
 
             <div className="py-12">
-                <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-2xl sm:px-6 lg:px-8">
                     <div className="mb-6">
                         <Link href={route('admin.users.index')}>
                             <Button variant="ghost" size="sm">
@@ -56,9 +58,9 @@ export default function Create({ roles }: CreateProps) {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>{t('users.createTitle')}</CardTitle>
+                            <CardTitle>{t('users.editTitle')}</CardTitle>
                             <CardDescription>
-                                {t('users.createDescription')}
+                                {t('users.editDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -67,11 +69,9 @@ export default function Create({ roles }: CreateProps) {
                                     <Label htmlFor="name">{t('users.name')}</Label>
                                     <Input
                                         id="name"
-                                        type="text"
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
                                         required
-                                        autoFocus
                                     />
                                     {errors.name && (
                                         <p className="text-sm text-red-600">{errors.name}</p>
@@ -93,33 +93,13 @@ export default function Create({ roles }: CreateProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="role">{t('users.role')}</Label>
-                                    <Select
-                                        value={data.role}
-                                        onValueChange={(value) => setData('role', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t('users.selectRole')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="developer">{t('users.developer')}</SelectItem>
-                                            <SelectItem value="ktbo">{t('users.ktbo')}</SelectItem>
-                                            <SelectItem value="registrator">{t('users.registrator')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.role && (
-                                        <p className="text-sm text-red-600">{errors.role}</p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
                                     <Label htmlFor="password">{t('users.password')}</Label>
                                     <Input
                                         id="password"
                                         type="password"
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
-                                        required
+                                        placeholder="Leave blank to keep current password"
                                     />
                                     {errors.password && (
                                         <p className="text-sm text-red-600">{errors.password}</p>
@@ -133,10 +113,31 @@ export default function Create({ roles }: CreateProps) {
                                         type="password"
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
-                                        required
                                     />
                                     {errors.password_confirmation && (
                                         <p className="text-sm text-red-600">{errors.password_confirmation}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="role">{t('users.role')}</Label>
+                                    <Select
+                                        value={data.role}
+                                        onValueChange={(value) => setData('role', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={t('users.selectRole')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {roles.map((role) => (
+                                                <SelectItem key={role.id} value={role.name}>
+                                                    {t(`users.${role.name}`)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.role && (
+                                        <p className="text-sm text-red-600">{errors.role}</p>
                                     )}
                                 </div>
 
@@ -147,7 +148,7 @@ export default function Create({ roles }: CreateProps) {
                                         </Button>
                                     </Link>
                                     <Button type="submit" disabled={processing}>
-                                        {processing ? t('users.creating') : t('users.create')}
+                                        {processing ? t('users.updating') : t('users.update')}
                                     </Button>
                                 </div>
                             </form>

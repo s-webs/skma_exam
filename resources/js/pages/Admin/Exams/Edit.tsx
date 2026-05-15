@@ -1,6 +1,7 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ interface EditProps {
 }
 
 export default function Edit({ exam, examTypes }: EditProps) {
+    const { t } = useTranslation();
     const { data, setData, put, processing, errors } = useForm({
         exam_type_id: exam.exam_type_id.toString(),
         name: exam.name,
@@ -59,7 +61,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
 
     return (
         <AppLayout>
-            <Head title="Редактировать экзамен" />
+            <Head title={t('exams.editTitle')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
@@ -67,22 +69,22 @@ export default function Edit({ exam, examTypes }: EditProps) {
                         <Link href={route('admin.exams.index')}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Назад к экзаменам
+                                {t('exams.backToExams')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Редактировать экзамен</CardTitle>
+                            <CardTitle>{t('exams.editTitle')}</CardTitle>
                             <CardDescription>
-                                Изменить параметры экзамена
+                                {t('exams.editDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="exam_type_id">Тип экзамена</Label>
+                                    <Label htmlFor="exam_type_id">{t('exams.examType')}</Label>
                                     <Select
                                         value={data.exam_type_id}
                                         onValueChange={(value) => setData('exam_type_id', value)}
@@ -104,7 +106,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Название экзамена</Label>
+                                    <Label htmlFor="name">{t('exams.examName')}</Label>
                                     <Input
                                         id="name"
                                         type="text"
@@ -118,7 +120,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="description">Описание</Label>
+                                    <Label htmlFor="description">{t('exams.descriptionLabel')}</Label>
                                     <Textarea
                                         id="description"
                                         value={data.description}
@@ -131,7 +133,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="language">Язык экзамена</Label>
+                                    <Label htmlFor="language">{t('exams.examLanguage')}</Label>
                                     <Select
                                         value={data.language}
                                         onValueChange={(value) => setData('language', value)}
@@ -140,9 +142,9 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ru">Русский</SelectItem>
-                                            <SelectItem value="kz">Казахский</SelectItem>
-                                            <SelectItem value="en">Английский</SelectItem>
+                                            <SelectItem value="ru">{t('exams.russian')}</SelectItem>
+                                            <SelectItem value="kz">{t('exams.kazakh')}</SelectItem>
+                                            <SelectItem value="en">{t('exams.english')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     {errors.language && (
@@ -152,7 +154,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="duration_minutes">Длительность (минуты)</Label>
+                                        <Label htmlFor="duration_minutes">{t('exams.duration')}</Label>
                                         <Input
                                             id="duration_minutes"
                                             type="number"
@@ -168,7 +170,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="questions_count">Количество вопросов</Label>
+                                        <Label htmlFor="questions_count">{t('exams.questionsCount')}</Label>
                                         <Input
                                             id="questions_count"
                                             type="number"
@@ -186,7 +188,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="passing_score">Проходной балл</Label>
+                                        <Label htmlFor="passing_score">{t('exams.passingScore')}</Label>
                                         <Input
                                             id="passing_score"
                                             type="number"
@@ -201,14 +203,14 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="max_attempts">Максимум попыток</Label>
+                                        <Label htmlFor="max_attempts">{t('exams.maxAttempts')}</Label>
                                         <Input
                                             id="max_attempts"
                                             type="number"
                                             value={data.max_attempts || ''}
                                             onChange={(e) => setData('max_attempts', e.target.value ? parseInt(e.target.value) : null)}
                                             min="1"
-                                            placeholder="Без ограничений"
+                                            placeholder={t('exams.maxAttemptsPlaceholder')}
                                         />
                                         {errors.max_attempts && (
                                             <p className="text-sm text-red-600">{errors.max_attempts}</p>
@@ -223,18 +225,18 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                         onCheckedChange={(checked) => setData('is_active', checked as boolean)}
                                     />
                                     <Label htmlFor="is_active" className="cursor-pointer">
-                                        Активен
+                                        {t('exams.isActive')}
                                     </Label>
                                 </div>
 
                                 <div className="flex justify-end gap-4">
                                     <Link href={route('admin.exams.index')}>
                                         <Button type="button" variant="outline">
-                                            Отмена
+                                            {t('exams.cancel')}
                                         </Button>
                                     </Link>
                                     <Button type="submit" disabled={processing}>
-                                        {processing ? 'Сохранение...' : 'Сохранить изменения'}
+                                        {processing ? t('exams.saving') : t('exams.saveChanges')}
                                     </Button>
                                 </div>
                             </form>

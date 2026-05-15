@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Pencil, Trash2, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,10 +37,12 @@ interface ExamTypesIndexProps {
 }
 
 export default function Index({ examTypes }: ExamTypesIndexProps) {
+    const { t } = useTranslation();
+
     const handleDelete = (id: number, examsCount: number) => {
         const message = examsCount > 0
-            ? `Вы уверены, что хотите удалить этот тип экзамена? Будут удалены все ${examsCount} привязанных экзаменов и их данные.`
-            : 'Вы уверены, что хотите удалить этот тип экзамена?';
+            ? t('examTypes.deleteConfirmWithExams', { count: examsCount })
+            : t('examTypes.deleteConfirm');
 
         if (confirm(message)) {
             router.delete(route('admin.exam-types.destroy', id));
@@ -48,50 +51,50 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
 
     return (
         <AppLayout>
-            <Head title="Типы экзаменов" />
+            <Head title={t('examTypes.title')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Типы экзаменов</h2>
+                            <h2 className="text-3xl font-bold tracking-tight">{t('examTypes.title')}</h2>
                             <p className="text-muted-foreground mt-2">
-                                Управление типами экзаменов (Магистратура, Ординатура и т.д.)
+                                {t('examTypes.description')}
                             </p>
                         </div>
                         <Link href={route('admin.exam-types.create')}>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Добавить тип
+                                {t('examTypes.addType')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Все типы экзаменов</CardTitle>
+                            <CardTitle>{t('examTypes.allTypes')}</CardTitle>
                             <CardDescription>
-                                Всего: {examTypes.length} типов
+                                {t('examTypes.total', { count: examTypes.length })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Название</TableHead>
-                                        <TableHead>Описание</TableHead>
-                                        <TableHead>Экзаменов</TableHead>
-                                        <TableHead>Статус</TableHead>
-                                        <TableHead>Регистрация</TableHead>
-                                        <TableHead>Абитуриенты</TableHead>
-                                        <TableHead className="text-right">Действия</TableHead>
+                                        <TableHead>{t('examTypes.name')}</TableHead>
+                                        <TableHead>{t('examTypes.descriptionLabel')}</TableHead>
+                                        <TableHead>{t('examTypes.examsCount')}</TableHead>
+                                        <TableHead>{t('examTypes.status')}</TableHead>
+                                        <TableHead>{t('examTypes.registration')}</TableHead>
+                                        <TableHead>{t('examTypes.applicants')}</TableHead>
+                                        <TableHead className="text-right">{t('examTypes.actions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {examTypes.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={7} className="text-center">
-                                                Типы экзаменов не найдены
+                                                {t('examTypes.noTypes')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -110,7 +113,7 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                                                 : 'bg-gray-100 text-gray-800'
                                                         }
                                                     >
-                                                        {examType.is_active ? 'Активен' : 'Неактивен'}
+                                                        {examType.is_active ? t('examTypes.active') : t('examTypes.inactive')}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
@@ -118,7 +121,7 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                                         <RegistrationLinkDialog examType={examType} />
                                                     ) : (
                                                         <span className="text-sm text-muted-foreground">
-                                                            Нет экзаменов
+                                                            {t('examTypes.noExams')}
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -127,7 +130,7 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                                         <Link href={route('admin.exam-types.applicants', examType.id)}>
                                                             <Button variant="outline" size="sm">
                                                                 <Users className="mr-2 h-4 w-4" />
-                                                                Список
+                                                                {t('examTypes.list')}
                                                             </Button>
                                                         </Link>
                                                     ) : (

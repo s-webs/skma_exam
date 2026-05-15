@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,15 +41,17 @@ interface QuestionsIndexProps {
 }
 
 export default function Index({ exam, questions }: QuestionsIndexProps) {
+    const { t } = useTranslation();
+
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот вопрос?')) {
+        if (confirm(t('questions.deleteConfirm'))) {
             router.delete(route('admin.questions.destroy', id));
         }
     };
 
     return (
         <AppLayout>
-            <Head title={`Вопросы - ${exam.name}`} />
+            <Head title={t('questions.titleWithExam', { name: exam.name })} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -56,14 +59,14 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                         <Link href={route('admin.exams.index')}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Назад к экзаменам
+                                {t('questions.backToExams')}
                             </Button>
                         </Link>
                     </div>
 
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Вопросы экзамена</h2>
+                            <h2 className="text-3xl font-bold tracking-tight">{t('questions.title')}</h2>
                             <p className="text-muted-foreground mt-2">
                                 {exam.name}
                             </p>
@@ -71,35 +74,35 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                         <Link href={route('admin.exams.questions.create', exam.id)}>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Добавить вопрос
+                                {t('questions.addQuestion')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Все вопросы</CardTitle>
+                            <CardTitle>{t('questions.allQuestions')}</CardTitle>
                             <CardDescription>
-                                Всего: {questions.length} вопросов
+                                {t('questions.total', { count: questions.length })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-16">#</TableHead>
-                                        <TableHead>Вопрос</TableHead>
-                                        <TableHead>Ответов</TableHead>
-                                        <TableHead>Правильных</TableHead>
-                                        <TableHead>Статус</TableHead>
-                                        <TableHead className="text-right">Действия</TableHead>
+                                        <TableHead className="w-16">{t('questions.number')}</TableHead>
+                                        <TableHead>{t('questions.question')}</TableHead>
+                                        <TableHead>{t('questions.answers')}</TableHead>
+                                        <TableHead>{t('questions.correctAnswers')}</TableHead>
+                                        <TableHead>{t('questions.status')}</TableHead>
+                                        <TableHead className="text-right">{t('questions.actions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {questions.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center">
-                                                Вопросы не найдены
+                                                {t('questions.noQuestions')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -116,7 +119,7 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                                                         </div>
                                                         {question.image_path && (
                                                             <span className="text-xs text-muted-foreground">
-                                                                С изображением
+                                                                {t('questions.withImage')}
                                                             </span>
                                                         )}
                                                     </TableCell>
@@ -130,7 +133,7 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                                                                     : 'bg-gray-100 text-gray-800'
                                                             }
                                                         >
-                                                            {question.is_active ? 'Активен' : 'Неактивен'}
+                                                            {question.is_active ? t('questions.active') : t('questions.inactive')}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">

@@ -1,6 +1,7 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { FormEvent, useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ interface CreateProps {
 }
 
 export default function Create({ exam }: CreateProps) {
+    const { t } = useTranslation();
     const [answers, setAnswers] = useState<Answer[]>([
         { content: '', is_correct: false },
         { content: '', is_correct: false },
@@ -102,7 +104,7 @@ export default function Create({ exam }: CreateProps) {
 
     return (
         <AppLayout>
-            <Head title="Создать вопрос" />
+            <Head title={t('questions.createTitle')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
@@ -110,28 +112,28 @@ export default function Create({ exam }: CreateProps) {
                         <Link href={route('admin.exams.questions.index', exam.id)}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Назад к вопросам
+                                {t('questions.backToQuestions')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Создать новый вопрос</CardTitle>
+                            <CardTitle>{t('questions.createTitle')}</CardTitle>
                             <CardDescription>
-                                Добавьте вопрос для экзамена: {exam.name}
+                                {t('questions.createDescription', { name: exam.name })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="content">Текст вопроса</Label>
+                                    <Label htmlFor="content">{t('questions.questionContent')}</Label>
                                     <Textarea
                                         id="content"
                                         value={data.content}
                                         onChange={(e) => setData('content', e.target.value)}
                                         rows={4}
-                                        placeholder="Введите текст вопроса или загрузите изображение"
+                                        placeholder={t('questions.questionContentPlaceholder')}
                                     />
                                     {errors.content && (
                                         <p className="text-sm text-red-600">{errors.content}</p>
@@ -139,7 +141,7 @@ export default function Create({ exam }: CreateProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="image">Изображение вопроса (необязательно)</Label>
+                                    <Label htmlFor="image">{t('questions.questionImage')}</Label>
                                     <div className="flex items-center gap-2">
                                         <input
                                             id="image"
@@ -153,11 +155,11 @@ export default function Create({ exam }: CreateProps) {
                                             className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
                                         >
                                             <ImageIcon className="h-4 w-4" />
-                                            {data.image ? data.image.name : 'Выбрать изображение'}
+                                            {data.image ? data.image.name : t('questions.selectImage')}
                                         </label>
                                         {data.image && (
                                             <span className="text-sm text-muted-foreground">
-                                                Файл выбран
+                                                {t('questions.fileSelected')}
                                             </span>
                                         )}
                                     </div>
@@ -167,13 +169,13 @@ export default function Create({ exam }: CreateProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="explanation">Объяснение (опционально)</Label>
+                                    <Label htmlFor="explanation">{t('questions.explanation')}</Label>
                                     <Textarea
                                         id="explanation"
                                         value={data.explanation}
                                         onChange={(e) => setData('explanation', e.target.value)}
                                         rows={3}
-                                        placeholder="Объяснение правильного ответа"
+                                        placeholder={t('questions.explanationPlaceholder')}
                                     />
                                     {errors.explanation && (
                                         <p className="text-sm text-red-600">{errors.explanation}</p>
@@ -182,7 +184,7 @@ export default function Create({ exam }: CreateProps) {
 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <Label>Варианты ответов</Label>
+                                        <Label>{t('questions.answersSection')}</Label>
                                         <Button
                                             type="button"
                                             variant="outline"
@@ -191,7 +193,7 @@ export default function Create({ exam }: CreateProps) {
                                             disabled={answers.length >= 6}
                                         >
                                             <Plus className="mr-2 h-4 w-4" />
-                                            Добавить ответ
+                                            {t('questions.addAnswer')}
                                         </Button>
                                     </div>
 
@@ -217,14 +219,14 @@ export default function Create({ exam }: CreateProps) {
                                                 <label
                                                     htmlFor={`answer-image-${index}`}
                                                     className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
-                                                    title="Добавить изображение"
+                                                    title={t('questions.addImage')}
                                                 >
                                                     <ImageIcon className="h-5 w-5" />
                                                 </label>
                                                 <Input
                                                     value={answer.content}
                                                     onChange={(e) => updateAnswer(index, 'content', e.target.value)}
-                                                    placeholder={`Вариант ответа ${index + 1} (текст или изображение)`}
+                                                    placeholder={t('questions.answerPlaceholder', { number: index + 1 })}
                                                     className="flex-1"
                                                 />
                                                 <div className="flex items-center space-x-2">
@@ -239,7 +241,7 @@ export default function Create({ exam }: CreateProps) {
                                                         htmlFor={`correct-${index}`}
                                                         className="cursor-pointer text-sm whitespace-nowrap"
                                                     >
-                                                        Правильный
+                                                        {t('questions.isCorrect')}
                                                     </Label>
                                                 </div>
                                                 {answers.length > 2 && (
@@ -263,11 +265,11 @@ export default function Create({ exam }: CreateProps) {
                                 <div className="flex justify-end gap-4">
                                     <Link href={route('admin.exams.questions.index', exam.id)}>
                                         <Button type="button" variant="outline">
-                                            Отмена
+                                            {t('questions.cancel')}
                                         </Button>
                                     </Link>
                                     <Button type="submit" disabled={processing}>
-                                        {processing ? 'Создание...' : 'Создать вопрос'}
+                                        {processing ? t('questions.creating') : t('questions.create')}
                                     </Button>
                                 </div>
                             </form>

@@ -1,6 +1,7 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ interface EditProps {
 }
 
 export default function Edit({ applicant }: EditProps) {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         name: applicant.name,
         email: applicant.email,
@@ -61,7 +63,7 @@ export default function Edit({ applicant }: EditProps) {
 
     return (
         <AppLayout>
-            <Head title="Редактировать абитуриента" />
+            <Head title={t('applicants.editTitle')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
@@ -69,23 +71,23 @@ export default function Edit({ applicant }: EditProps) {
                         <Link href={route('admin.applicants.index')}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Назад к списку
+                                {t('applicants.backToApplicants')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Редактировать абитуриента</CardTitle>
+                            <CardTitle>{t('applicants.editTitle')}</CardTitle>
                             <CardDescription>
-                                Обновите данные абитуриента
+                                {t('applicants.editDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
                                 <div className="grid gap-6 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">ФИО</Label>
+                                        <Label htmlFor="name">{t('applicants.fullName')}</Label>
                                         <Input
                                             id="name"
                                             value={data.name}
@@ -98,7 +100,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="identifier">ИИН</Label>
+                                        <Label htmlFor="identifier">{t('applicants.iinLabel')}</Label>
                                         <Input
                                             id="identifier"
                                             value={data.identifier}
@@ -112,7 +114,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email">{t('applicants.email')}</Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -126,7 +128,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="phone">Телефон</Label>
+                                        <Label htmlFor="phone">{t('applicants.phoneLabel')}</Label>
                                         <Input
                                             id="phone"
                                             value={data.phone}
@@ -139,7 +141,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="address">Адрес</Label>
+                                        <Label htmlFor="address">{t('common.address')}</Label>
                                         <Textarea
                                             id="address"
                                             value={data.address}
@@ -153,7 +155,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="graduate_organization">Учебное заведение</Label>
+                                        <Label htmlFor="graduate_organization">{t('common.graduateOrganization')}</Label>
                                         <Input
                                             id="graduate_organization"
                                             value={data.graduate_organization}
@@ -166,7 +168,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="graduate_year">Год окончания</Label>
+                                        <Label htmlFor="graduate_year">{t('common.graduateYear')}</Label>
                                         <Input
                                             id="graduate_year"
                                             value={data.graduate_year}
@@ -179,7 +181,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="speciality">Специальность</Label>
+                                        <Label htmlFor="speciality">{t('common.speciality')}</Label>
                                         <Input
                                             id="speciality"
                                             value={data.speciality}
@@ -192,7 +194,7 @@ export default function Edit({ applicant }: EditProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="language">Язык экзамена</Label>
+                                        <Label htmlFor="language">{t('applicants.languageLabel')}</Label>
                                         <Select
                                             value={data.language}
                                             onValueChange={(value) => setData('language', value)}
@@ -201,9 +203,9 @@ export default function Edit({ applicant }: EditProps) {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="kz">Казахский</SelectItem>
-                                                <SelectItem value="ru">Русский</SelectItem>
-                                                <SelectItem value="en">Английский</SelectItem>
+                                                <SelectItem value="kz">{t('applicants.kazakh')}</SelectItem>
+                                                <SelectItem value="ru">{t('applicants.russian')}</SelectItem>
+                                                <SelectItem value="en">{t('applicants.english')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.language && (
@@ -218,127 +220,177 @@ export default function Edit({ applicant }: EditProps) {
                                             onCheckedChange={(checked) => setData('verified', checked as boolean)}
                                         />
                                         <Label htmlFor="verified" className="cursor-pointer">
-                                            Верифицирован
+                                            {t('applicants.isVerified')}
                                         </Label>
                                     </div>
                                 </div>
 
                                 {applicant.telegram_token && (
                                     <div className="rounded-lg border bg-muted/50 p-4">
-                                        <Label className="text-sm font-medium">Telegram Token</Label>
+                                        <Label className="text-sm font-medium">{t('common.telegramToken')}</Label>
                                         <p className="mt-1 font-mono text-sm">{applicant.telegram_token}</p>
                                     </div>
                                 )}
 
                                 <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold">Документы</h3>
+                                    <h3 className="text-lg font-semibold">{t('common.documents')}</h3>
 
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
-                                            <Label htmlFor="document_front">Документ (лицевая сторона)</Label>
-                                            {applicant.document_front && (
-                                                <div className="mb-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="document_front">{t('common.documentFront')}</Label>
+                                                <input
+                                                    id="document_front"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => setData('document_front', e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                />
+                                                <label
+                                                    htmlFor="document_front"
+                                                    className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
+                                                    title={t('questions.selectImage')}
+                                                >
+                                                    <ImageIcon className="h-5 w-5" />
+                                                </label>
+                                            </div>
+                                            {(applicant.document_front || data.document_front) && (
+                                                <div className="mt-2">
                                                     <img
-                                                        src={`/storage/${applicant.document_front}`}
+                                                        src={data.document_front ? URL.createObjectURL(data.document_front) : `/storage/${applicant.document_front}`}
                                                         alt="Document front"
                                                         className="max-w-xs rounded border"
                                                     />
                                                 </div>
                                             )}
-                                            <Input
-                                                id="document_front"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setData('document_front', e.target.files?.[0] || null)}
-                                            />
                                             {errors.document_front && (
                                                 <p className="text-sm text-red-600">{errors.document_front}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="document_back">Документ (обратная сторона)</Label>
-                                            {applicant.document_back && (
-                                                <div className="mb-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="document_back">{t('common.documentBack')}</Label>
+                                                <input
+                                                    id="document_back"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => setData('document_back', e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                />
+                                                <label
+                                                    htmlFor="document_back"
+                                                    className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
+                                                    title={t('questions.selectImage')}
+                                                >
+                                                    <ImageIcon className="h-5 w-5" />
+                                                </label>
+                                            </div>
+                                            {(applicant.document_back || data.document_back) && (
+                                                <div className="mt-2">
                                                     <img
-                                                        src={`/storage/${applicant.document_back}`}
+                                                        src={data.document_back ? URL.createObjectURL(data.document_back) : `/storage/${applicant.document_back}`}
                                                         alt="Document back"
                                                         className="max-w-xs rounded border"
                                                     />
                                                 </div>
                                             )}
-                                            <Input
-                                                id="document_back"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setData('document_back', e.target.files?.[0] || null)}
-                                            />
                                             {errors.document_back && (
                                                 <p className="text-sm text-red-600">{errors.document_back}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="diplom">Диплом</Label>
-                                            {applicant.diplom && (
-                                                <div className="mb-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="diplom">{t('common.diplom')}</Label>
+                                                <input
+                                                    id="diplom"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => setData('diplom', e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                />
+                                                <label
+                                                    htmlFor="diplom"
+                                                    className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
+                                                    title={t('questions.selectImage')}
+                                                >
+                                                    <ImageIcon className="h-5 w-5" />
+                                                </label>
+                                            </div>
+                                            {(applicant.diplom || data.diplom) && (
+                                                <div className="mt-2">
                                                     <img
-                                                        src={`/storage/${applicant.diplom}`}
+                                                        src={data.diplom ? URL.createObjectURL(data.diplom) : `/storage/${applicant.diplom}`}
                                                         alt="Diplom"
                                                         className="max-w-xs rounded border"
                                                     />
                                                 </div>
                                             )}
-                                            <Input
-                                                id="diplom"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setData('diplom', e.target.files?.[0] || null)}
-                                            />
                                             {errors.diplom && (
                                                 <p className="text-sm text-red-600">{errors.diplom}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="certificate">Сертификат</Label>
-                                            {applicant.certificate && (
-                                                <div className="mb-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="certificate">{t('common.certificate')}</Label>
+                                                <input
+                                                    id="certificate"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => setData('certificate', e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                />
+                                                <label
+                                                    htmlFor="certificate"
+                                                    className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
+                                                    title={t('questions.selectImage')}
+                                                >
+                                                    <ImageIcon className="h-5 w-5" />
+                                                </label>
+                                            </div>
+                                            {(applicant.certificate || data.certificate) && (
+                                                <div className="mt-2">
                                                     <img
-                                                        src={`/storage/${applicant.certificate}`}
+                                                        src={data.certificate ? URL.createObjectURL(data.certificate) : `/storage/${applicant.certificate}`}
                                                         alt="Certificate"
                                                         className="max-w-xs rounded border"
                                                     />
                                                 </div>
                                             )}
-                                            <Input
-                                                id="certificate"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setData('certificate', e.target.files?.[0] || null)}
-                                            />
                                             {errors.certificate && (
                                                 <p className="text-sm text-red-600">{errors.certificate}</p>
                                             )}
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="photo">Фото</Label>
-                                            {applicant.photo && (
-                                                <div className="mb-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label htmlFor="photo">{t('common.photo')}</Label>
+                                                <input
+                                                    id="photo"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(e) => setData('photo', e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                />
+                                                <label
+                                                    htmlFor="photo"
+                                                    className="cursor-pointer rounded-md border border-input bg-background p-2 hover:bg-accent hover:text-accent-foreground"
+                                                    title={t('questions.selectImage')}
+                                                >
+                                                    <ImageIcon className="h-5 w-5" />
+                                                </label>
+                                            </div>
+                                            {(applicant.photo || data.photo) && (
+                                                <div className="mt-2">
                                                     <img
-                                                        src={`/storage/${applicant.photo}`}
+                                                        src={data.photo ? URL.createObjectURL(data.photo) : `/storage/${applicant.photo}`}
                                                         alt="Photo"
                                                         className="max-w-xs rounded border"
                                                     />
                                                 </div>
                                             )}
-                                            <Input
-                                                id="photo"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setData('photo', e.target.files?.[0] || null)}
-                                            />
                                             {errors.photo && (
                                                 <p className="text-sm text-red-600">{errors.photo}</p>
                                             )}
@@ -349,11 +401,11 @@ export default function Edit({ applicant }: EditProps) {
                                 <div className="flex justify-end gap-4">
                                     <Link href={route('admin.applicants.index')}>
                                         <Button type="button" variant="outline">
-                                            Отмена
+                                            {t('applicants.cancel')}
                                         </Button>
                                     </Link>
                                     <Button type="submit" disabled={processing}>
-                                        {processing ? 'Сохранение...' : 'Сохранить изменения'}
+                                        {processing ? t('applicants.saving') : t('applicants.saveChanges')}
                                     </Button>
                                 </div>
                             </form>

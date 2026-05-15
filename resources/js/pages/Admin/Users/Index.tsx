@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,8 +33,10 @@ interface UsersIndexProps {
 }
 
 export default function Index({ users }: UsersIndexProps) {
+    const { t } = useTranslation();
+
     const handleDelete = (id: number) => {
-        if (confirm('Are you sure you want to delete this user?')) {
+        if (confirm(t('users.deleteConfirm'))) {
             router.delete(route('admin.users.destroy', id));
         }
     };
@@ -53,48 +56,48 @@ export default function Index({ users }: UsersIndexProps) {
 
     return (
         <AppLayout>
-            <Head title="Users Management" />
+            <Head title={t('users.title')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h2 className="text-3xl font-bold tracking-tight">Users Management</h2>
+                            <h2 className="text-3xl font-bold tracking-tight">{t('users.title')}</h2>
                             <p className="text-muted-foreground mt-2">
-                                Manage system users and their roles
+                                {t('users.description')}
                             </p>
                         </div>
                         <Link href={route('admin.users.create')}>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Add User
+                                {t('users.addUser')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>All Users</CardTitle>
+                            <CardTitle>{t('users.allUsers')}</CardTitle>
                             <CardDescription>
-                                Total: {users.total} users
+                                {t('users.total', { count: users.total })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead>Created</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead>{t('users.name')}</TableHead>
+                                        <TableHead>{t('users.email')}</TableHead>
+                                        <TableHead>{t('users.role')}</TableHead>
+                                        <TableHead>{t('users.created')}</TableHead>
+                                        <TableHead className="text-right">{t('users.actions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {users.data.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="text-center">
-                                                No users found
+                                                {t('users.noUsers')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -106,7 +109,7 @@ export default function Index({ users }: UsersIndexProps) {
                                                     <Badge
                                                         className={getRoleBadgeColor(user.roles[0]?.name)}
                                                     >
-                                                        {user.roles[0]?.name || 'No role'}
+                                                        {t(`users.${user.roles[0]?.name}`) || user.roles[0]?.name}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>

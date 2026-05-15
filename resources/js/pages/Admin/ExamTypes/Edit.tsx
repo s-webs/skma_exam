@@ -1,6 +1,7 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ interface EditProps {
 }
 
 export default function Edit({ examType }: EditProps) {
+    const { t } = useTranslation();
     const { data, setData, put, processing, errors } = useForm({
         name: examType.name,
         description: examType.description || '',
@@ -34,7 +36,7 @@ export default function Edit({ examType }: EditProps) {
 
     return (
         <AppLayout>
-            <Head title="Редактировать тип экзамена" />
+            <Head title={t('examTypes.editTitle')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
@@ -42,22 +44,22 @@ export default function Edit({ examType }: EditProps) {
                         <Link href={route('admin.exam-types.index')}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Назад к типам экзаменов
+                                {t('examTypes.backToTypes')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Редактировать тип экзамена</CardTitle>
+                            <CardTitle>{t('examTypes.editTitle')}</CardTitle>
                             <CardDescription>
-                                Изменить информацию о типе экзамена
+                                {t('examTypes.editDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Название</Label>
+                                    <Label htmlFor="name">{t('examTypes.name')}</Label>
                                     <Input
                                         id="name"
                                         type="text"
@@ -72,7 +74,7 @@ export default function Edit({ examType }: EditProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="description">Описание</Label>
+                                    <Label htmlFor="description">{t('examTypes.descriptionLabel')}</Label>
                                     <Textarea
                                         id="description"
                                         value={data.description}
@@ -91,18 +93,18 @@ export default function Edit({ examType }: EditProps) {
                                         onCheckedChange={(checked) => setData('is_active', checked as boolean)}
                                     />
                                     <Label htmlFor="is_active" className="cursor-pointer">
-                                        Активен
+                                        {t('examTypes.isActive')}
                                     </Label>
                                 </div>
 
                                 <div className="flex justify-end gap-4">
                                     <Link href={route('admin.exam-types.index')}>
                                         <Button type="button" variant="outline">
-                                            Отмена
+                                            {t('examTypes.cancel')}
                                         </Button>
                                     </Link>
                                     <Button type="submit" disabled={processing}>
-                                        {processing ? 'Сохранение...' : 'Сохранить изменения'}
+                                        {processing ? t('examTypes.saving') : t('examTypes.saveChanges')}
                                     </Button>
                                 </div>
                             </form>

@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -31,6 +32,7 @@ interface RegistrationLinkDialogProps {
 }
 
 export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const registrationUrl = `${window.location.origin}/register/${examType.slug}`;
 
@@ -45,19 +47,19 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    Ссылка на регистрацию
+                    {t('registrationLink.button')}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Ссылка для регистрации абитуриентов</DialogTitle>
+                    <DialogTitle>{t('registrationLink.title')}</DialogTitle>
                     <DialogDescription>
-                        Отправьте эту ссылку абитуриентам для регистрации на экзамен "{examType.name}"
+                        {t('registrationLink.description', { name: examType.name })}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <Label>URL для регистрации</Label>
+                        <Label>{t('registrationLink.urlLabel')}</Label>
                         <div className="flex gap-2">
                             <Input value={registrationUrl} readOnly />
                             <Button
@@ -76,7 +78,7 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
                     </div>
 
                     <div className="rounded-lg border bg-muted/50 p-4">
-                        <p className="text-sm font-medium mb-2">Доступные экзамены:</p>
+                        <p className="text-sm font-medium mb-2">{t('registrationLink.availableExams')}</p>
                         <ul className="space-y-1">
                             {examType.exams.map((exam) => (
                                 <li key={exam.id} className="text-sm text-muted-foreground">
@@ -88,8 +90,7 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
 
                     <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                         <p className="text-sm text-yellow-800">
-                            <strong>Важно:</strong> После регистрации абитуриенты не получат автоматический доступ к экзамену.
-                            Регистратор должен вручную одобрить каждую заявку.
+                            <strong>{t('registrationLink.importantTitle')}</strong> {t('registrationLink.importantText')}
                         </p>
                     </div>
 
@@ -97,7 +98,7 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
                         <Link href={registrationUrl} target="_blank">
                             <Button variant="outline">
                                 <ExternalLink className="mr-2 h-4 w-4" />
-                                Открыть страницу регистрации
+                                {t('registrationLink.openPage')}
                             </Button>
                         </Link>
                     </div>

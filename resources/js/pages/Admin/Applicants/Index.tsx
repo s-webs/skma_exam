@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Plus, Eye, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,8 +44,10 @@ interface IndexProps {
 }
 
 export default function Index({ applicants }: IndexProps) {
+    const { t } = useTranslation();
+
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены, что хотите удалить этого абитуриента?')) {
+        if (confirm(t('applicants.deleteConfirm'))) {
             router.delete(route('admin.applicants.destroy', id));
         }
     };
@@ -54,68 +57,68 @@ export default function Index({ applicants }: IndexProps) {
     };
 
     const handleUnapprove = (id: number) => {
-        if (confirm('Вы уверены, что хотите отменить одобрение?')) {
+        if (confirm(t('applicants.unapproveConfirm'))) {
             router.post(route('admin.applicants.unapprove', id));
         }
     };
 
     const getLanguageName = (lang: string) => {
         const languages: Record<string, string> = {
-            kz: 'Казахский',
-            ru: 'Русский',
-            en: 'Английский',
+            kz: t('applicants.kazakh'),
+            ru: t('applicants.russian'),
+            en: t('applicants.english'),
         };
         return languages[lang] || lang;
     };
 
     return (
         <AppLayout>
-            <Head title="Абитуриенты" />
+            <Head title={t('applicants.title')} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-bold">Абитуриенты</h2>
+                            <h2 className="text-2xl font-bold">{t('applicants.title')}</h2>
                             <p className="text-muted-foreground">
-                                Всего: {applicants.total}
+                                {t('applicants.total', { count: applicants.total })}
                             </p>
                         </div>
                         <Link href={route('admin.applicants.create')}>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Добавить абитуриента
+                                {t('applicants.addApplicant')}
                             </Button>
                         </Link>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Список абитуриентов</CardTitle>
+                            <CardTitle>{t('applicants.listTitle')}</CardTitle>
                             <CardDescription>
-                                Управление зарегистрированными абитуриентами
+                                {t('applicants.listDescription')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>ИИН</TableHead>
-                                        <TableHead>ФИО</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Телефон</TableHead>
-                                        <TableHead>Язык</TableHead>
-                                        <TableHead>Верификация</TableHead>
-                                        <TableHead>Одобрение</TableHead>
-                                        <TableHead>Попытки</TableHead>
-                                        <TableHead className="text-right">Действия</TableHead>
+                                        <TableHead>{t('applicants.iin')}</TableHead>
+                                        <TableHead>{t('applicants.name')}</TableHead>
+                                        <TableHead>{t('applicants.email')}</TableHead>
+                                        <TableHead>{t('applicants.phone')}</TableHead>
+                                        <TableHead>{t('applicants.language')}</TableHead>
+                                        <TableHead>{t('applicants.verification')}</TableHead>
+                                        <TableHead>{t('applicants.approval')}</TableHead>
+                                        <TableHead>{t('applicants.attempts')}</TableHead>
+                                        <TableHead className="text-right">{t('applicants.actions')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {applicants.data.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={9} className="text-center text-muted-foreground">
-                                                Нет зарегистрированных абитуриентов
+                                                {t('applicants.noApplicants')}
                                             </TableCell>
                                         </TableRow>
                                     ) : (
@@ -135,11 +138,11 @@ export default function Index({ applicants }: IndexProps) {
                                                 <TableCell>
                                                     {applicant.verified ? (
                                                         <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                                                            Верифицирован
+                                                            {t('applicants.verified')}
                                                         </span>
                                                     ) : (
                                                         <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
-                                                            Не верифицирован
+                                                            {t('applicants.notVerified')}
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -147,7 +150,7 @@ export default function Index({ applicants }: IndexProps) {
                                                     {applicant.approved ? (
                                                         <div className="flex flex-col gap-1">
                                                             <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                                                                Одобрен
+                                                                {t('applicants.approved')}
                                                             </span>
                                                             {applicant.approved_by_user && (
                                                                 <span className="text-xs text-muted-foreground">
@@ -157,7 +160,7 @@ export default function Index({ applicants }: IndexProps) {
                                                         </div>
                                                     ) : (
                                                         <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-                                                            Не одобрен
+                                                            {t('applicants.notApproved')}
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -173,7 +176,7 @@ export default function Index({ applicants }: IndexProps) {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={() => handleApprove(applicant.id)}
-                                                                title="Одобрить"
+                                                                title={t('applicants.approve')}
                                                             >
                                                                 <CheckCircle className="h-4 w-4 text-green-600" />
                                                             </Button>
@@ -182,7 +185,7 @@ export default function Index({ applicants }: IndexProps) {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 onClick={() => handleUnapprove(applicant.id)}
-                                                                title="Отменить одобрение"
+                                                                title={t('applicants.unapprove')}
                                                             >
                                                                 <XCircle className="h-4 w-4 text-orange-600" />
                                                             </Button>
