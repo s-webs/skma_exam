@@ -1,0 +1,160 @@
+import { Head, Link, router } from '@inertiajs/react';
+import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+
+interface Answer {
+    id: number;
+    content: string;
+    is_correct: boolean;
+}
+
+interface Question {
+    id: number;
+    content: string;
+    image_path: string | null;
+    is_active: boolean;
+    answers_count: number;
+    answers: Answer[];
+    created_at: string;
+}
+
+interface Exam {
+    id: number;
+    name: string;
+}
+
+interface QuestionsIndexProps {
+    exam: Exam;
+    questions: Question[];
+}
+
+export default function Index({ exam, questions }: QuestionsIndexProps) {
+    const handleDelete = (id: number) => {
+        if (confirm('Вы уверены, что хотите удалить этот вопрос?')) {
+            router.delete(route('admin.questions.destroy', id));
+        }
+    };
+
+    return (
+        <AppLayout>
+            <Head title={`Вопросы - ${exam.name}`} />
+
+            <div className="py-12">
+                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                    <div className="mb-6">
+                        <Link href={route('admin.exams.index')}>
+                            <Button variant="ghost" size="sm">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Назад к экзаменам
+                            </Button>
+                        </Link>
+                    </div>
+
+                    <div className="mb-6 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-3xl font-bold tracking-tight">Вопросы экзамена</h2>
+                            <p className="text-muted-foreground mt-2">
+                                {exam.name}
+                            </p>
+                        </div>
+                        <Link href={route('admin.exams.questions.create', exam.id)}>
+                            <Button>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Добавить вопрос
+                            </Button>
+                        </Link>
+                    </div>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Все вопросы</CardTitle>
+                            <CardDescription>
+                                Всего: {questions.length} вопросов
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Вопрос</TableHead>
+                                        <TableHead>Ответов</TableHead>
+                                        <TableHead>Правильных</TableHead>
+                                        <TableHead>Статус</TableHead>
+                                        <TableHead className="text-right">Действия</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {questions.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center">
+                                                Вопросы не найдены
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        questions.map((question) => {
+                                            const correctAnswers = question.answers.filter(a => a.is_correct).length;
+                                            return (
+                                                <TableRow key={question.id}>
+                                                    <TableCell className="max-w-md">
+                                                        <div className="truncate font-medium">
+                                                            {question.content}
+                                                        </div>
+                                                        {question.image_path && (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                С изображением
+                                                            </span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>{question.answers_count}</TableCell>
+                                                    <TableCell>{correctAnswers}</TableCell>
+                                                    <TableCell>
+                                                        <Badge
+                                                            className={
+                                                                question.is_active
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : 'bg-gray-100 text-gray-800'
+                                                            }
+                                                        >
+                                                            {question.is_active ? 'Активен' : 'Неактивен'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Link href={route('admin.questions.edit', question.id)}>
+                                                                <Button variant="outline" size="sm">
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </Button>
+                                                            </Link>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleDelete(question.id)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </AppLayout>
+    );
+}
