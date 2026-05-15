@@ -140,4 +140,48 @@ class TelegramService
             return false;
         }
     }
+
+    public function getWebhookInfo(): ?array
+    {
+        try {
+            if (! $this->bot) {
+                return null;
+            }
+
+            $info = $this->bot->getWebhookInfo();
+
+            return [
+                'url' => $info->getUrl(),
+                'pending_update_count' => $info->getPendingUpdateCount(),
+                'last_error_date' => $info->getLastErrorDate(),
+                'last_error_message' => $info->getLastErrorMessage(),
+                'max_connections' => $info->getMaxConnections(),
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to get webhook info: '.$e->getMessage());
+
+            return null;
+        }
+    }
+
+    public function getMe(): ?array
+    {
+        try {
+            if (! $this->bot) {
+                return null;
+            }
+
+            $user = $this->bot->getMe();
+
+            return [
+                'id' => $user->getId(),
+                'username' => $user->getUsername(),
+                'first_name' => $user->getFirstName(),
+            ];
+        } catch (Exception $e) {
+            Log::error('Failed to get bot info: '.$e->getMessage());
+
+            return null;
+        }
+    }
 }

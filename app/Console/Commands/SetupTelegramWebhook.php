@@ -26,17 +26,30 @@ class SetupTelegramWebhook extends Command
      */
     public function handle(TelegramService $telegram)
     {
-        $url = config('app.url') . '/telegram/webhook';
+        $appUrl = rtrim((string) config('app.url'), '/');
+
+        if (! str_starts_with($appUrl, 'https://')) {
+            $this->error('APP_URL must be a public HTTPS URL (e.g. https://your-domain.kz)');
+            $this->line('Current APP_URL: '.$appUrl);
+
+            return Command::FAILURE;
+        }
+
+        $url = $appUrl.'/telegram/webhook';
 
         $this->info('Setting up Telegram webhook...');
-        $this->info('Webhook URL: ' . $url);
+        $this->info('Webhook URL: '.$url);
 
         if ($telegram->setWebhook($url)) {
             $this->info('✅ Webhook successfully set!');
+            $this->call('telegram:diagnose');
+
             return Command::SUCCESS;
-        } else {
-            $this->error('❌ Failed to set webhook. Check your bot token and logs.');
-            return Command::FAILURE;
         }
+
+        $this->error('❌ Failed to set webhook. Check storage/logs/laravel.log');
+        $this->line('Run: php artisan telegram:diagnose');
+
+        return Command::FAILURE;
     }
 }

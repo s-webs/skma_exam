@@ -634,9 +634,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
                                         <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5">
                                             <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                                                <li>Откройте бота в Telegram и нажмите «Start»</li>
+                                                <li>
+                                                    Нажмите кнопку ниже «Открыть @бот» — не вводите /start вручную в чате
+                                                </li>
+                                                <li>В Telegram нажмите «Start» / «Запустить»</li>
                                                 <li>Дождитесь сообщения с кодом подтверждения</li>
-                                                <li>Введите код ниже на этой странице</li>
+                                                <li>Введите код на этой странице</li>
                                             </ol>
 
                                             {telegramBotUrl ? (
