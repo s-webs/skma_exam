@@ -21,6 +21,66 @@ class TelegramService
     /**
      * Отправить код подтверждения пользователю
      */
+    public function bot(): ?BotApi
+    {
+        return $this->bot;
+    }
+
+    public function buildBotUrl(): ?string
+    {
+        $username = config('services.telegram.bot_username');
+        if (! $username) {
+            return null;
+        }
+
+        return 'https://t.me/'.ltrim($username, '@');
+    }
+
+    /**
+     * @param  array<int, array<int, array{text: string}>>>  $keyboardRows
+     */
+    public function sendMessageWithKeyboard(
+        string $chatId,
+        string $message,
+        array $keyboardRows,
+        ?string $parseMode = null
+    ): bool {
+        try {
+            if (! $this->bot) {
+                return false;
+            }
+
+            $payload = [
+                'chat_id' => $chatId,
+                'text' => $message,
+                'reply_markup' => json_encode([
+                    'keyboard' => $keyboardRows,
+                    'resize_keyboard' => true,
+                    'one_time_keyboard' => false,
+                ]),
+            ];
+
+            if ($parseMode) {
+                $payload['parse_mode'] = $parseMode;
+            }
+
+            $this->bot->call('sendMessage', $payload);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Failed to send Telegram keyboard message: '.$e->getMessage());
+
+            return false;
+        }
+    }
+
+    public function sendMainMenu(string $chatId, string $message, ?string $parseMode = null): bool
+    {
+        return $this->sendMessageWithKeyboard($chatId, $message, [
+            [['text' => TelegramBotChatState::BUTTON_GET_CODE]],
+        ], $parseMode);
+    }
+
     public function sendVerificationCode(string $chatId, string $code): bool
     {
         try {

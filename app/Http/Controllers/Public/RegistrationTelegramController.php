@@ -59,14 +59,10 @@ class RegistrationTelegramController extends Controller
         $request->session()->put(RegistrationTelegramService::SESSION_TOKEN_KEY, $result['token']);
         $request->session()->forget(RegistrationTelegramService::SESSION_VERIFIED_KEY);
 
-        $botUsername = config('services.telegram.bot_username');
-
         return response()->json([
             'token' => $result['token'],
-            'bot_username' => $botUsername,
-            'bot_url' => $botUsername
-                ? 'https://t.me/'.ltrim($botUsername, '@').'?start='.$result['token']
-                : null,
+            'bot_username' => config('services.telegram.bot_username'),
+            'bot_url' => app(TelegramService::class)->buildBotUrl(),
             'linked' => false,
             'verified' => false,
         ]);
@@ -122,25 +118,14 @@ class RegistrationTelegramController extends Controller
             $applicant
         );
 
-        if ($result['linked'] && $applicant->telegram_chat_id) {
-            $draft = $registrationTelegram->getDraft($result['token']);
-            if ($draft) {
-                $telegram->sendVerificationCode($applicant->telegram_chat_id, $draft['code']);
-            }
-        }
-
         $request->session()->put(RegistrationTelegramService::SESSION_TOKEN_KEY, $result['token']);
         $request->session()->forget(RegistrationTelegramService::SESSION_VERIFIED_KEY);
 
-        $botUsername = config('services.telegram.bot_username');
-
         return response()->json([
             'token' => $result['token'],
-            'bot_username' => $botUsername,
-            'bot_url' => $botUsername
-                ? 'https://t.me/'.ltrim($botUsername, '@').'?start='.$result['token']
-                : null,
-            'linked' => $result['linked'],
+            'bot_username' => config('services.telegram.bot_username'),
+            'bot_url' => $telegram->buildBotUrl(),
+            'linked' => false,
             'verified' => false,
             'applicant' => [
                 'name' => $applicant->name,

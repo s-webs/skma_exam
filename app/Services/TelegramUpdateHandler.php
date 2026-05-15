@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Applicant;
 use Illuminate\Support\Facades\Log;
 use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Exception;
@@ -12,15 +11,31 @@ class TelegramUpdateHandler
     public function __construct(
         protected RegistrationTelegramService $registrationTelegram,
         protected TelegramService $telegram,
+        protected TelegramBotChatState $chatState,
     ) {}
 
     public function handle(array $update): void
     {
-        if (! isset($update['message'])) {
+        if (isset($update['message'])) {
+            $this->handleMessage($update['message']);
+
             return;
         }
 
-        $message = $update['message'];
+        if (isset($update['callback_query'])) {
+            $callback = $update['callback_query'];
+            $chatId = (string) ($callback['message']['chat']['id'] ?? '');
+            $data = $callback['data'] ?? '';
+
+            if ($chatId !== '' && $data === 'get_code') {
+                $this->answerCallback($callback['id'] ?? '');
+                $this->promptForToken($chatId);
+            }
+        }
+    }
+
+    protected function handleMessage(array $message): void
+    {
         $chatId = (string) ($message['chat']['id'] ?? '');
         $text = trim($message['text'] ?? '');
 
@@ -28,67 +43,106 @@ class TelegramUpdateHandler
             return;
         }
 
-        Log::info('Telegram message received', [
-            'chat_id' => $chatId,
-            'text' => $text,
-        ]);
+        Log::info('Telegram message received', ['chat_id' => $chatId, 'text' => $text]);
 
-        if (! str_starts_with($text, '/start')) {
-            if (in_array($text, ['/stop', '/help'], true)) {
-                $this->sendMessage(
-                    $chatId,
-                    "Для регистрации откройте ссылку «Открыть @бот» на сайте и нажмите Start.\n\nНе вводите /start вручную — нужна ссылка со страницы регистрации."
-                );
-            }
-
-            return;
-        }
-
-        $token = $this->extractStartPayload($text);
-
-        if ($token === null) {
-            $this->sendMessage(
+        if ($text === '/cancel') {
+            $this->chatState->clear($chatId);
+            $this->telegram->sendMainMenu(
                 $chatId,
-                "👋 Добро пожаловать!\n\nНажмите кнопку «Открыть бота» на странице регистрации на сайте — откроется чат с нужной ссылкой.\n\nНе отправляйте /start вручную."
+                "Действие отменено.\n\nНажмите «".TelegramBotChatState::BUTTON_GET_CODE.'», когда будете готовы.'
             );
 
             return;
         }
 
-        if ($this->registrationTelegram->getDraft($token)) {
-            if ($this->registrationTelegram->linkChat($token, $chatId, $this->telegram)) {
-                $this->sendMessage(
-                    $chatId,
-                    "✅ Telegram подключён!\n\nКод подтверждения отправлен в этот чат. Введите его на сайте, чтобы продолжить регистрацию."
-                );
-            } else {
-                $this->sendMessage(
-                    $chatId,
-                    "❌ Не удалось отправить код. Проверьте TELEGRAM_BOT_TOKEN на сервере или попробуйте позже."
-                );
-            }
+        if ($this->isGetCodeAction($text)) {
+            $this->promptForToken($chatId);
 
             return;
         }
 
-        $applicant = Applicant::where('telegram_token', $token)->first();
+        if ($this->chatState->isAwaitingToken($chatId)) {
+            $this->processSubmittedToken($chatId, $this->normalizeTokenInput($text));
+            $this->chatState->clear($chatId);
 
-        if ($applicant) {
-            $applicant->telegram_chat_id = $chatId;
-            $applicant->save();
+            return;
+        }
 
-            $this->sendMessage(
+        if (str_starts_with($text, '/start')) {
+            $payload = $this->extractStartPayload($text);
+            if ($payload !== null) {
+                $this->processSubmittedToken($chatId, $payload);
+
+                return;
+            }
+        }
+
+        if (in_array($text, ['/help', '/stop'], true)) {
+            $this->sendWelcome($chatId);
+
+            return;
+        }
+
+        if (str_starts_with($text, '/')) {
+            $this->telegram->sendMainMenu(
                 $chatId,
-                "✅ Ваш аккаунт успешно привязан!\n\nТеперь вы будете получать коды подтверждения в этот чат."
+                'Используйте кнопку «'.TelegramBotChatState::BUTTON_GET_CODE."» внизу экрана.\n\n/help — подсказка"
             );
 
             return;
         }
 
-        $this->sendMessage(
+        $this->sendWelcome($chatId);
+    }
+
+    protected function promptForToken(string $chatId): void
+    {
+        $this->chatState->setAwaitingToken($chatId);
+
+        $this->sendPlain(
             $chatId,
-            "❌ Ссылка устарела или недействительна.\n\nВернитесь на сайт, нажмите «Продолжить» на шаге с личными данными и снова откройте бота кнопкой на странице."
+            "📋 <b>Получение кода верификации</b>\n\n".
+            "1. На странице регистрации найдите блок «Токен верификации»\n".
+            "2. Скопируйте токен\n".
+            "3. Отправьте его сюда одним сообщением\n\n".
+            'Для отмены отправьте /cancel',
+            'HTML'
         );
+    }
+
+    protected function processSubmittedToken(string $chatId, string $token): void
+    {
+        $result = $this->registrationTelegram->processVerificationToken(
+            $token,
+            $chatId,
+            $this->telegram
+        );
+
+        $this->telegram->sendMainMenu($chatId, $result['message']);
+    }
+
+    protected function sendWelcome(string $chatId): void
+    {
+        $this->chatState->clear($chatId);
+
+        $this->telegram->sendMainMenu(
+            $chatId,
+            "👋 <b>SKMA — верификация регистрации</b>\n\n".
+            "Нажмите кнопку «".TelegramBotChatState::BUTTON_GET_CODE."».\n".
+            "Бот попросит токен со страницы регистрации и пришлёт код подтверждения.",
+            'HTML'
+        );
+    }
+
+    protected function isGetCodeAction(string $text): bool
+    {
+        return $text === TelegramBotChatState::BUTTON_GET_CODE
+            || $text === 'Получить код верификации';
+    }
+
+    protected function normalizeTokenInput(string $text): string
+    {
+        return preg_replace('/\s+/', '', $text) ?? $text;
     }
 
     protected function extractStartPayload(string $text): ?string
@@ -103,7 +157,6 @@ class TelegramUpdateHandler
             return null;
         }
 
-        // /start@BotName token
         if (str_contains($payload, '@')) {
             $subParts = preg_split('/\s+/', $payload, 2);
 
@@ -113,17 +166,35 @@ class TelegramUpdateHandler
         return $payload;
     }
 
-    protected function sendMessage(string $chatId, string $message): void
+    protected function answerCallback(string $callbackId): void
     {
-        $token = config('services.telegram.bot_token');
-        if (! $token) {
+        if ($callbackId === '') {
+            return;
+        }
+
+        $bot = $this->telegram->bot();
+        if (! $bot) {
+            return;
+        }
+
+        try {
+            $bot->answerCallbackQuery($callbackId);
+        } catch (Exception $e) {
+            Log::warning('answerCallbackQuery failed: '.$e->getMessage());
+        }
+    }
+
+    protected function sendPlain(string $chatId, string $message, ?string $parseMode = null): void
+    {
+        $botToken = config('services.telegram.bot_token');
+        if (! $botToken) {
             Log::error('Telegram bot token not configured');
 
             return;
         }
 
         try {
-            (new BotApi($token))->sendMessage($chatId, $message);
+            (new BotApi($botToken))->sendMessage($chatId, $message, $parseMode);
         } catch (Exception $e) {
             Log::error('Telegram sendMessage failed: '.$e->getMessage(), ['chat_id' => $chatId]);
         }

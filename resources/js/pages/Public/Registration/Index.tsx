@@ -21,6 +21,8 @@ import {
     MessageCircle,
     ExternalLink,
     Loader2,
+    Copy,
+    Check,
 } from 'lucide-react';
 
 type RegistrationStep = 'exam' | 'personal' | 'telegram' | 'education' | 'documents';
@@ -91,6 +93,8 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const [selectedExam, setSelectedExam] = useState<number | null>(null);
     const [currentStep, setCurrentStep] = useState<RegistrationStep>('exam');
     const [telegramBotUrl, setTelegramBotUrl] = useState<string | null>(null);
+    const [verificationToken, setVerificationToken] = useState<string | null>(null);
+    const [tokenCopied, setTokenCopied] = useState(false);
     const [telegramLinked, setTelegramLinked] = useState(false);
     const [telegramVerified, setTelegramVerified] = useState(false);
     const [verificationCode, setVerificationCode] = useState('');
@@ -130,11 +134,27 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
     const resetTelegramState = useCallback(() => {
         setTelegramBotUrl(null);
+        setVerificationToken(null);
+        setTokenCopied(false);
         setTelegramLinked(false);
         setTelegramVerified(false);
         setVerificationCode('');
         setTelegramError(null);
     }, []);
+
+    const copyVerificationToken = async () => {
+        if (!verificationToken) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(verificationToken);
+            setTokenCopied(true);
+            setTimeout(() => setTokenCopied(false), 2000);
+        } catch {
+            setTelegramError('Не удалось скопировать токен. Выделите и скопируйте вручную.');
+        }
+    };
 
     const pollTelegramStatus = useCallback(async () => {
         const result = await registrationJson<{ linked: boolean; verified: boolean }>(
@@ -170,6 +190,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     }, [formErrors.telegram]);
 
     const applyTelegramInitResult = (initData: {
+        token?: string;
         bot_url: string | null;
         linked: boolean;
         verified: boolean;
@@ -185,6 +206,8 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         };
     }) => {
         setTelegramBotUrl(initData.bot_url);
+        setVerificationToken(initData.token ?? null);
+        setTokenCopied(false);
         setTelegramLinked(initData.linked);
         setTelegramVerified(initData.verified);
         setVerificationCode('');
@@ -227,6 +250,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setInitFieldErrors({});
 
         const result = await registrationJson<{
+            token: string;
             bot_url: string | null;
             linked: boolean;
             verified: boolean;
@@ -261,6 +285,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setTelegramError(null);
 
         const result = await registrationJson<{
+            token: string;
             bot_url: string | null;
             linked: boolean;
             verified: boolean;
@@ -633,13 +658,41 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                         </div>
 
                                         <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5">
+                                            {verificationToken && (
+                                                <div className="space-y-2">
+                                                    <Label className="text-gray-800">Токен верификации</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            readOnly
+                                                            value={verificationToken}
+                                                            className="h-12 font-mono text-sm bg-white"
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            className="h-12 w-12 shrink-0"
+                                                            onClick={copyVerificationToken}
+                                                            title="Скопировать токен"
+                                                        >
+                                                            {tokenCopied ? (
+                                                                <Check className="h-4 w-4 text-green-600" />
+                                                            ) : (
+                                                                <Copy className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                    <p className="text-xs text-gray-600">
+                                                        Скопируйте токен — он понадобится в боте
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                                                <li>
-                                                    Нажмите кнопку ниже «Открыть @бот» — не вводите /start вручную в чате
-                                                </li>
-                                                <li>В Telegram нажмите «Start» / «Запустить»</li>
-                                                <li>Дождитесь сообщения с кодом подтверждения</li>
-                                                <li>Введите код на этой странице</li>
+                                                <li>Откройте бота в Telegram</li>
+                                                <li>Нажмите «Получить код верификации»</li>
+                                                <li>Отправьте боту скопированный токен</li>
+                                                <li>Введите полученный код ниже на сайте</li>
                                             </ol>
 
                                             {telegramBotUrl ? (
@@ -669,8 +722,8 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
                                                 )}
                                                 {telegramLinked
-                                                    ? 'Бот подключён — проверьте код в Telegram'
-                                                    : 'Ожидаем подключение к боту...'}
+                                                    ? 'Токен принят — проверьте код в Telegram'
+                                                    : 'Ожидаем отправку токена в боте...'}
                                             </div>
                                         </div>
 

@@ -171,6 +171,50 @@ class RegistrationTelegramService
         ]);
     }
 
+    /**
+     * @return array{ok: bool, message: string}
+     */
+    public function processVerificationToken(string $token, string $chatId, TelegramService $telegram): array
+    {
+        $token = trim($token);
+        if ($token === '' || strlen($token) < 16) {
+            return [
+                'ok' => false,
+                'message' => '❌ Неверный формат токена. Скопируйте токен целиком со страницы регистрации.',
+            ];
+        }
+
+        if ($this->getDraft($token)) {
+            if ($this->linkChat($token, $chatId, $telegram)) {
+                return [
+                    'ok' => true,
+                    'message' => "✅ Код подтверждения отправлен в этот чат.\n\nВведите его на сайте в поле «Код из Telegram».",
+                ];
+            }
+
+            return [
+                'ok' => false,
+                'message' => '❌ Не удалось отправить код. Попробуйте позже.',
+            ];
+        }
+
+        $applicant = Applicant::where('telegram_token', $token)->first();
+        if ($applicant) {
+            $applicant->telegram_chat_id = $chatId;
+            $applicant->save();
+
+            return [
+                'ok' => true,
+                'message' => "✅ Telegram привязан к вашей заявке.\n\nЕсли вы проходите регистрацию на сайте — вернитесь на шаг подтверждения и введите код.",
+            ];
+        }
+
+        return [
+            'ok' => false,
+            'message' => "❌ Токен не найден или устарел.\n\nВернитесь на сайт, нажмите «Продолжить» на шаге с личными данными — появится новый токен.",
+        ];
+    }
+
     public function resendCode(string $token, TelegramService $telegram): bool
     {
         $draft = $this->getDraft($token);
