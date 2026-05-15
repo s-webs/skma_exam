@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ExamController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ApplicantController;
 use App\Http\Controllers\Public\RegistrationController;
+use App\Http\Controllers\Public\RegistrationTelegramController;
 use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -31,6 +32,11 @@ Route::post('/locale', function (Illuminate\Http\Request $request) {
 // Public registration routes
 Route::get('/register/{slug}', [RegistrationController::class, 'index'])->name('public.registration.index');
 Route::post('/register/{slug}', [RegistrationController::class, 'store'])->name('public.registration.store');
+Route::post('/register/{slug}/telegram/init', [RegistrationTelegramController::class, 'init'])->name('public.registration.telegram.init');
+Route::post('/register/{slug}/telegram/resume', [RegistrationTelegramController::class, 'resume'])->name('public.registration.telegram.resume');
+Route::get('/register/{slug}/telegram/status', [RegistrationTelegramController::class, 'status'])->name('public.registration.telegram.status');
+Route::post('/register/{slug}/telegram/verify', [RegistrationTelegramController::class, 'verify'])->name('public.registration.telegram.verify');
+Route::post('/register/{slug}/telegram/resend', [RegistrationTelegramController::class, 'resend'])->name('public.registration.telegram.resend');
 
 // Telegram webhook
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');

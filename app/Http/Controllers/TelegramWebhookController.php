@@ -3,64 +3,85 @@
 namespace App\Http\Controllers;
 
 use App\Models\Applicant;
+use App\Services\RegistrationTelegramService;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use TelegramBot\Api\BotApi;
 
 class TelegramWebhookController extends Controller
 {
-    public function handle(Request $request)
-    {
+    public function handle(
+        Request $request,
+        RegistrationTelegramService $registrationTelegram,
+        TelegramService $telegram
+    ) {
         try {
             $update = $request->all();
 
-            if (!isset($update['message'])) {
+            if (! isset($update['message'])) {
                 return response()->json(['ok' => true]);
             }
 
             $message = $update['message'];
-            $chatId = $message['chat']['id'];
+            $chatId = (string) $message['chat']['id'];
             $text = $message['text'] ?? '';
 
-            // Проверяем команду /start с токеном
-            if (strpos($text, '/start') === 0) {
-                $parts = explode(' ', $text);
+            if (strpos($text, '/start') !== 0) {
+                return response()->json(['ok' => true]);
+            }
 
-                if (count($parts) === 2) {
-                    $token = $parts[1];
+            $parts = explode(' ', $text, 2);
+            $bot = new BotApi(config('services.telegram.bot_token'));
 
-                    // Ищем абитуриента по токену
-                    $applicant = Applicant::where('telegram_token', $token)->first();
+            if (count($parts) !== 2 || $parts[1] === '') {
+                $bot->sendMessage(
+                    $chatId,
+                    "👋 Добро пожаловать!\n\nДля регистрации или привязки аккаунта откройте ссылку на бота со страницы регистрации."
+                );
 
-                    if ($applicant) {
-                        // Сохраняем chat_id
-                        $applicant->telegram_chat_id = $chatId;
-                        $applicant->save();
+                return response()->json(['ok' => true]);
+            }
 
-                        $bot = new BotApi(config('services.telegram.bot_token'));
-                        $bot->sendMessage(
-                            $chatId,
-                            "✅ Ваш аккаунт успешно привязан!\n\nТеперь вы будете получать коды подтверждения в этот чат."
-                        );
-                    } else {
-                        $bot = new BotApi(config('services.telegram.bot_token'));
-                        $bot->sendMessage(
-                            $chatId,
-                            "❌ Неверный токен. Пожалуйста, проверьте токен в личном кабинете."
-                        );
-                    }
-                } else {
-                    $bot = new BotApi(config('services.telegram.bot_token'));
+            $token = trim($parts[1]);
+
+            if ($registrationTelegram->getDraft($token)) {
+                if ($registrationTelegram->linkChat($token, $chatId, $telegram)) {
                     $bot->sendMessage(
                         $chatId,
-                        "👋 Добро пожаловать!\n\nДля привязки аккаунта отправьте команду:\n/start ВАШ_ТОКЕН\n\nТокен можно найти в личном кабинете."
+                        "✅ Telegram подключён!\n\nКод подтверждения отправлен в этот чат. Введите его на сайте, чтобы продолжить регистрацию."
+                    );
+                } else {
+                    $bot->sendMessage(
+                        $chatId,
+                        "❌ Не удалось отправить код. Попробуйте позже или обратитесь в поддержку."
                     );
                 }
+
+                return response()->json(['ok' => true]);
+            }
+
+            $applicant = Applicant::where('telegram_token', $token)->first();
+
+            if ($applicant) {
+                $applicant->telegram_chat_id = $chatId;
+                $applicant->save();
+
+                $bot->sendMessage(
+                    $chatId,
+                    "✅ Ваш аккаунт успешно привязан!\n\nТеперь вы будете получать коды подтверждения в этот чат."
+                );
+            } else {
+                $bot->sendMessage(
+                    $chatId,
+                    "❌ Неверная ссылка. Откройте бота со страницы регистрации на сайте."
+                );
             }
 
             return response()->json(['ok' => true]);
         } catch (\Exception $e) {
-            Log::error('Telegram webhook error: ' . $e->getMessage());
+            Log::error('Telegram webhook error: '.$e->getMessage());
+
             return response()->json(['ok' => true]);
         }
     }

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
+use App\Models\Applicant;
 use App\Models\ExamType;
+use App\Services\RegistrationTelegramService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class RegistrationController extends Controller
@@ -19,18 +22,43 @@ class RegistrationController extends Controller
 
         return Inertia::render('Public/Registration/Index', [
             'examType' => $examType,
+            'telegramBotUsername' => config('services.telegram.bot_username'),
         ]);
     }
 
-    public function store(Request $request, $slug)
+    public function store(Request $request, $slug, RegistrationTelegramService $registrationTelegram)
     {
         $examType = ExamType::where('slug', $slug)->firstOrFail();
+
+        if (! $registrationTelegram->isSessionVerified($request)) {
+            return back()->withErrors([
+                'telegram' => 'Подтвердите аккаунт через Telegram перед отправкой заявки.',
+            ]);
+        }
+
+        $telegramDraft = $registrationTelegram->getVerifiedDraft($request);
+        if (! $telegramDraft || ($telegramDraft['slug'] ?? '') !== $slug) {
+            return back()->withErrors([
+                'telegram' => 'Сессия подтверждения Telegram истекла. Пройдите шаг верификации снова.',
+            ]);
+        }
+
+        $existingApplicantId = $telegramDraft['applicant_id'] ?? null;
 
         $validated = $request->validate([
             'exam_id' => 'required|exists:exams,id',
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:applicants,email',
-            'identifier' => 'required|string|size:12|unique:applicants,identifier',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('applicants', 'email')->ignore($existingApplicantId),
+            ],
+            'identifier' => [
+                'required',
+                'string',
+                'size:12',
+                Rule::unique('applicants', 'identifier')->ignore($existingApplicantId),
+            ],
             'address' => 'required|string',
             'phone' => 'required|string',
             'graduate_organization' => 'required|string',
@@ -43,11 +71,34 @@ class RegistrationController extends Controller
             'photo' => 'nullable|image|max:2048',
         ]);
 
-        // Get language from selected exam
+        $personal = $telegramDraft['personal'] ?? [];
+        foreach (['name', 'email', 'identifier', 'address', 'phone'] as $field) {
+            if (($personal[$field] ?? null) !== ($validated[$field] ?? null)) {
+                return back()->withErrors([
+                    'telegram' => 'Личные данные изменились после подтверждения Telegram. Пройдите верификацию снова.',
+                ]);
+            }
+        }
+
+        if ((string) $validated['exam_id'] !== (string) ($telegramDraft['exam_id'] ?? '')) {
+            return back()->withErrors([
+                'telegram' => 'Выбранный экзамен не совпадает с подтверждённой регистрацией.',
+            ]);
+        }
+
         $exam = \App\Models\Exam::findOrFail($validated['exam_id']);
         $validated['language'] = $exam->language;
+        $validated['telegram_token'] = $request->session()->get(RegistrationTelegramService::SESSION_TOKEN_KEY);
+        $validated['telegram_chat_id'] = $telegramDraft['chat_id'] ?? null;
 
-        $applicant = \App\Models\Applicant::create($validated);
+        unset($validated['document_front'], $validated['document_back'], $validated['diplom'], $validated['certificate'], $validated['photo']);
+
+        if ($existingApplicantId) {
+            $applicant = Applicant::findOrFail($existingApplicantId);
+            $applicant->update($validated);
+        } else {
+            $applicant = Applicant::create($validated);
+        }
 
         // Handle file uploads
         if ($request->hasFile('document_front')) {
@@ -74,6 +125,8 @@ class RegistrationController extends Controller
             $path = $request->file('photo')->store('applicants/photos', 'public');
             $applicant->update(['photo' => $path]);
         }
+
+        $registrationTelegram->clearSession($request);
 
         return Inertia::render('Public/Registration/Success', [
             'applicant' => $applicant,

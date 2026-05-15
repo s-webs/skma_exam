@@ -1,12 +1,72 @@
 import { Head, useForm } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { GraduationCap, User, Mail, Phone, MapPin, Building2, Calendar, BookOpen, Upload, CheckCircle2, ChevronRight } from 'lucide-react';
+import {
+    GraduationCap,
+    User,
+    Mail,
+    Phone,
+    MapPin,
+    Building2,
+    Calendar,
+    BookOpen,
+    Upload,
+    CheckCircle2,
+    ChevronRight,
+    MessageCircle,
+    ExternalLink,
+    Loader2,
+} from 'lucide-react';
+
+type RegistrationStep = 'exam' | 'personal' | 'telegram' | 'education' | 'documents';
+
+function getCsrfToken(): string {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function registrationJson<T>(
+    url: string,
+    options: RequestInit = {},
+): Promise<
+    | { ok: true; data: T }
+    | { ok: false; message: string; errors?: Record<string, string[]>; can_resume?: boolean }
+> {
+    const response = await fetch(url, {
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-XSRF-TOKEN': getCsrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+            ...options.headers,
+        },
+        ...options,
+    });
+
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const errors = body.errors as Record<string, string[]> | undefined;
+        const firstFieldError = errors
+            ? Object.values(errors).flat()[0]
+            : undefined;
+
+        return {
+            ok: false,
+            message: firstFieldError ?? body.message ?? 'Произошла ошибка. Попробуйте снова.',
+            errors,
+            can_resume: body.can_resume === true,
+        };
+    }
+
+    return { ok: true, data: body as T };
+}
 
 interface Exam {
     id: number;
@@ -24,11 +84,22 @@ interface ExamType {
 
 interface RegistrationIndexProps {
     examType: ExamType;
+    telegramBotUsername: string | null;
 }
 
-export default function Index({ examType }: RegistrationIndexProps) {
+export default function Index({ examType, telegramBotUsername }: RegistrationIndexProps) {
     const [selectedExam, setSelectedExam] = useState<number | null>(null);
-    const [currentStep, setCurrentStep] = useState<'exam' | 'personal' | 'education' | 'documents'>('exam');
+    const [currentStep, setCurrentStep] = useState<RegistrationStep>('exam');
+    const [telegramBotUrl, setTelegramBotUrl] = useState<string | null>(null);
+    const [telegramLinked, setTelegramLinked] = useState(false);
+    const [telegramVerified, setTelegramVerified] = useState(false);
+    const [verificationCode, setVerificationCode] = useState('');
+    const [telegramError, setTelegramError] = useState<string | null>(null);
+    const [telegramLoading, setTelegramLoading] = useState(false);
+    const [resumeLoading, setResumeLoading] = useState(false);
+    const [canResumeExisting, setCanResumeExisting] = useState(false);
+    const [initFieldErrors, setInitFieldErrors] = useState<Record<string, string[]>>({});
+    const [verifyLoading, setVerifyLoading] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
         exam_id: '',
@@ -53,8 +124,196 @@ export default function Index({ examType }: RegistrationIndexProps) {
     };
 
     const canProceedToPersonal = data.exam_id !== '';
-    const canProceedToEducation = data.name && data.email && data.identifier && data.phone && data.address;
+    const canProceedToTelegram = data.name && data.email && data.identifier && data.phone && data.address;
+    const canProceedToEducation = telegramVerified;
     const canProceedToDocuments = data.graduate_organization && data.graduate_year && data.speciality;
+
+    const resetTelegramState = useCallback(() => {
+        setTelegramBotUrl(null);
+        setTelegramLinked(false);
+        setTelegramVerified(false);
+        setVerificationCode('');
+        setTelegramError(null);
+    }, []);
+
+    const pollTelegramStatus = useCallback(async () => {
+        const result = await registrationJson<{ linked: boolean; verified: boolean }>(
+            route('public.registration.telegram.status', examType.slug),
+        );
+
+        if (result.ok) {
+            setTelegramLinked(result.data.linked);
+            if (result.data.verified) {
+                setTelegramVerified(true);
+            }
+        }
+    }, [examType.slug]);
+
+    useEffect(() => {
+        if (currentStep !== 'telegram' || telegramVerified) {
+            return;
+        }
+
+        pollTelegramStatus();
+        const interval = setInterval(pollTelegramStatus, 3000);
+
+        return () => clearInterval(interval);
+    }, [currentStep, telegramVerified, pollTelegramStatus]);
+
+    const formErrors = errors as Record<string, string | undefined>;
+
+    useEffect(() => {
+        if (formErrors.telegram) {
+            setTelegramError(formErrors.telegram);
+            setCurrentStep('telegram');
+        }
+    }, [formErrors.telegram]);
+
+    const applyTelegramInitResult = (initData: {
+        bot_url: string | null;
+        linked: boolean;
+        verified: boolean;
+        applicant?: {
+            name: string;
+            email: string;
+            identifier: string;
+            address: string;
+            phone: string;
+            graduate_organization: string;
+            graduate_year: string;
+            speciality: string;
+        };
+    }) => {
+        setTelegramBotUrl(initData.bot_url);
+        setTelegramLinked(initData.linked);
+        setTelegramVerified(initData.verified);
+        setVerificationCode('');
+        setCanResumeExisting(false);
+        setInitFieldErrors({});
+
+        if (initData.applicant) {
+            setData((current) => ({
+                ...current,
+                name: initData.applicant!.name,
+                email: initData.applicant!.email,
+                identifier: initData.applicant!.identifier,
+                address: initData.applicant!.address,
+                phone: initData.applicant!.phone,
+                graduate_organization: initData.applicant!.graduate_organization ?? '',
+                graduate_year: initData.applicant!.graduate_year ?? '',
+                speciality: initData.applicant!.speciality ?? '',
+            }));
+        }
+
+        setCurrentStep('telegram');
+    };
+
+    const isDuplicateAccountError = (fieldErrors?: Record<string, string[]>) => {
+        if (!fieldErrors) {
+            return false;
+        }
+
+        const duplicatePattern = /already been taken|уже занят|уже существует/i;
+
+        return ['email', 'identifier'].some((field) =>
+            fieldErrors[field]?.some((msg) => duplicatePattern.test(msg)),
+        );
+    };
+
+    const initTelegramVerification = async () => {
+        setTelegramLoading(true);
+        setTelegramError(null);
+        setCanResumeExisting(false);
+        setInitFieldErrors({});
+
+        const result = await registrationJson<{
+            bot_url: string | null;
+            linked: boolean;
+            verified: boolean;
+        }>(route('public.registration.telegram.init', examType.slug), {
+            method: 'POST',
+            body: JSON.stringify({
+                exam_id: data.exam_id,
+                name: data.name,
+                email: data.email,
+                identifier: data.identifier,
+                address: data.address,
+                phone: data.phone,
+            }),
+        });
+
+        setTelegramLoading(false);
+
+        if (!result.ok) {
+            setTelegramError(result.message);
+            if (result.errors) {
+                setInitFieldErrors(result.errors);
+            }
+            setCanResumeExisting(result.can_resume === true || isDuplicateAccountError(result.errors));
+            return;
+        }
+
+        applyTelegramInitResult(result.data);
+    };
+
+    const resumeExistingAccountVerification = async () => {
+        setResumeLoading(true);
+        setTelegramError(null);
+
+        const result = await registrationJson<{
+            bot_url: string | null;
+            linked: boolean;
+            verified: boolean;
+            applicant: {
+                name: string;
+                email: string;
+                identifier: string;
+                address: string;
+                phone: string;
+                graduate_organization: string;
+                graduate_year: string;
+                speciality: string;
+            };
+        }>(route('public.registration.telegram.resume', examType.slug), {
+            method: 'POST',
+            body: JSON.stringify({
+                exam_id: data.exam_id,
+                email: data.email,
+                identifier: data.identifier,
+            }),
+        });
+
+        setResumeLoading(false);
+
+        if (!result.ok) {
+            setTelegramError(result.message);
+            return;
+        }
+
+        applyTelegramInitResult(result.data);
+    };
+
+    const verifyTelegramCode = async () => {
+        setVerifyLoading(true);
+        setTelegramError(null);
+
+        const result = await registrationJson<{ verified: boolean }>(
+            route('public.registration.telegram.verify', examType.slug),
+            {
+                method: 'POST',
+                body: JSON.stringify({ code: verificationCode }),
+            },
+        );
+
+        setVerifyLoading(false);
+
+        if (!result.ok) {
+            setTelegramError(result.message);
+            return;
+        }
+
+        setTelegramVerified(true);
+    };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -64,6 +323,7 @@ export default function Index({ examType }: RegistrationIndexProps) {
     const steps = [
         { id: 'exam', label: 'Экзамен', icon: GraduationCap },
         { id: 'personal', label: 'Личные данные', icon: User },
+        { id: 'telegram', label: 'Telegram', icon: MessageCircle },
         { id: 'education', label: 'Образование', icon: BookOpen },
         { id: 'documents', label: 'Документы', icon: Upload },
     ];
@@ -236,8 +496,10 @@ export default function Index({ examType }: RegistrationIndexProps) {
                                                         required
                                                         className="h-12"
                                                     />
-                                                    {errors.identifier && (
-                                                        <p className="text-sm text-red-600">{errors.identifier}</p>
+                                                    {(errors.identifier || initFieldErrors.identifier?.[0]) && (
+                                                        <p className="text-sm text-red-600">
+                                                            {errors.identifier || initFieldErrors.identifier?.[0]}
+                                                        </p>
                                                     )}
                                                 </div>
 
@@ -274,8 +536,10 @@ export default function Index({ examType }: RegistrationIndexProps) {
                                                     required
                                                     className="h-12"
                                                 />
-                                                {errors.email && (
-                                                    <p className="text-sm text-red-600">{errors.email}</p>
+                                                {(errors.email || initFieldErrors.email?.[0]) && (
+                                                    <p className="text-sm text-red-600">
+                                                        {errors.email || initFieldErrors.email?.[0]}
+                                                    </p>
                                                 )}
                                             </div>
 
@@ -310,18 +574,183 @@ export default function Index({ examType }: RegistrationIndexProps) {
                                             </Button>
                                             <Button
                                                 type="button"
-                                                onClick={() => setCurrentStep('education')}
-                                                disabled={!canProceedToEducation}
+                                                onClick={initTelegramVerification}
+                                                disabled={!canProceedToTelegram || telegramLoading}
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                Продолжить
+                                                {telegramLoading ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        Проверка...
+                                                    </>
+                                                ) : (
+                                                    'Продолжить'
+                                                )}
                                             </Button>
+                                        </div>
+                                        {telegramError && !canResumeExisting && (
+                                            <p className="text-sm text-red-600">{telegramError}</p>
+                                        )}
+
+                                        {canResumeExisting && (
+                                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                                                <p className="text-sm text-amber-900">
+                                                    {telegramError ||
+                                                        'Заявка с таким email или ИИН уже зарегистрирована.'}
+                                                </p>
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    className="w-full"
+                                                    size="lg"
+                                                    onClick={resumeExistingAccountVerification}
+                                                    disabled={resumeLoading || !data.email || !data.identifier}
+                                                >
+                                                    {resumeLoading ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            Загрузка...
+                                                        </>
+                                                    ) : (
+                                                        'У вас уже есть аккаунт, перейти к подтверждению'
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {currentStep === 'telegram' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                                Подтверждение через Telegram
+                                            </h2>
+                                            <p className="text-gray-600">
+                                                Привяжите Telegram и введите код из бота. Без этого шага продолжить регистрацию нельзя.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5">
+                                            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                                                <li>Откройте бота в Telegram и нажмите «Start»</li>
+                                                <li>Дождитесь сообщения с кодом подтверждения</li>
+                                                <li>Введите код ниже на этой странице</li>
+                                            </ol>
+
+                                            {telegramBotUrl ? (
+                                                <Button type="button" variant="outline" className="w-full" size="lg" asChild>
+                                                    <a href={telegramBotUrl} target="_blank" rel="noopener noreferrer">
+                                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                                        Открыть{' '}
+                                                        {telegramBotUsername
+                                                            ? `@${telegramBotUsername.replace(/^@/, '')}`
+                                                            : 'Telegram-бота'}
+                                                    </a>
+                                                </Button>
+                                            ) : (
+                                                <p className="text-sm text-amber-700">
+                                                    Бот не настроен (TELEGRAM_BOT_USERNAME). Обратитесь к администратору.
+                                                </p>
+                                            )}
+
+                                            <div
+                                                className={`flex items-center gap-2 text-sm ${
+                                                    telegramLinked ? 'text-green-700' : 'text-gray-600'
+                                                }`}
+                                            >
+                                                {telegramLinked ? (
+                                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                                ) : (
+                                                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                                                )}
+                                                {telegramLinked
+                                                    ? 'Бот подключён — проверьте код в Telegram'
+                                                    : 'Ожидаем подключение к боту...'}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="verification_code">Код из Telegram *</Label>
+                                            <Input
+                                                id="verification_code"
+                                                value={verificationCode}
+                                                onChange={(e) =>
+                                                    setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                                                }
+                                                placeholder="000000"
+                                                maxLength={6}
+                                                inputMode="numeric"
+                                                className="h-12 text-center text-lg tracking-widest font-mono"
+                                                disabled={!telegramLinked || telegramVerified}
+                                            />
+                                        </div>
+
+                                        {telegramError && (
+                                            <p className="text-sm text-red-600">{telegramError}</p>
+                                        )}
+
+                                        {formErrors.telegram && (
+                                            <p className="text-sm text-red-600">{formErrors.telegram}</p>
+                                        )}
+
+                                        {telegramVerified && (
+                                            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                                                Telegram подтверждён. Можно перейти к следующему шагу.
+                                            </div>
+                                        )}
+
+                                        <div className="flex flex-col gap-3 sm:flex-row">
+                                            <Button
+                                                type="button"
+                                                onClick={() => {
+                                                    resetTelegramState();
+                                                    setCurrentStep('personal');
+                                                }}
+                                                variant="outline"
+                                                className="flex-1"
+                                                size="lg"
+                                            >
+                                                Назад
+                                            </Button>
+                                            {!telegramVerified && (
+                                                <Button
+                                                    type="button"
+                                                    onClick={verifyTelegramCode}
+                                                    disabled={
+                                                        !telegramLinked ||
+                                                        verificationCode.length !== 6 ||
+                                                        verifyLoading
+                                                    }
+                                                    className="flex-1"
+                                                    size="lg"
+                                                >
+                                                    {verifyLoading ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            Проверка...
+                                                        </>
+                                                    ) : (
+                                                        'Подтвердить код'
+                                                    )}
+                                                </Button>
+                                            )}
+                                            {telegramVerified && (
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => setCurrentStep('education')}
+                                                    className="flex-1"
+                                                    size="lg"
+                                                >
+                                                    Продолжить
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 3: Education */}
+                                {/* Step 4: Education */}
                                 {currentStep === 'education' && (
                                     <div className="space-y-6">
                                         <div>
@@ -394,7 +823,7 @@ export default function Index({ examType }: RegistrationIndexProps) {
                                         <div className="flex gap-3">
                                             <Button
                                                 type="button"
-                                                onClick={() => setCurrentStep('personal')}
+                                                onClick={() => setCurrentStep('telegram')}
                                                 variant="outline"
                                                 className="flex-1"
                                                 size="lg"
