@@ -22,6 +22,7 @@ class Applicant extends Model
         'approved_at',
         'approved_by',
         'telegram_token',
+        'telegram_chat_id',
         'document_front',
         'document_back',
         'diplom',

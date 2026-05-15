@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ExamController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ApplicantController;
 use App\Http\Controllers\Public\RegistrationController;
+use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,6 +31,9 @@ Route::post('/locale', function (Illuminate\Http\Request $request) {
 // Public registration routes
 Route::get('/register/{slug}', [RegistrationController::class, 'index'])->name('public.registration.index');
 Route::post('/register/{slug}', [RegistrationController::class, 'store'])->name('public.registration.store');
+
+// Telegram webhook
+Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 
 // Auth routes
 Route::middleware('guest')->group(function () {
