@@ -133,6 +133,13 @@ test('pdf service renders non empty binary', function () {
     expect(str_starts_with($pdf, '%PDF'))->toBeTrue();
 });
 
+test('pdf view data includes logo and single qr payload', function () {
+    $data = app(ExamResultPdfService::class)->buildViewData($this->attempt);
+
+    expect($data['logoDataUri'])->toStartWith('data:image/jpeg;base64,');
+    expect($data['qrDataUri'])->toStartWith('data:image/svg+xml;base64,');
+});
+
 test('finish sends telegram report with pdf', function () {
     $this->mock(TelegramService::class, function ($mock) {
         $mock->shouldReceive('sendExamResultsWithReport')

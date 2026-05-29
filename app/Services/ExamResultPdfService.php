@@ -10,6 +10,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ExamResultPdfService
 {
+    private const LOGO_PATH = 'assets/images/logo-beauty.jpg';
+
     public function publicUrl(ExamAttempt $attempt): string
     {
         return route('public.exam.report', $attempt->token, absolute: true);
@@ -53,10 +55,22 @@ class ExamResultPdfService
             'exam' => $attempt->exam,
             'result' => $result,
             'reportUrl' => $reportUrl,
+            'logoDataUri' => $this->buildLogoDataUri(),
             'qrDataUri' => $this->buildQrCodeDataUri($reportUrl),
             'completedDate' => $completedAt?->format('d.m.Y') ?? now()->format('d.m.Y'),
             'locales' => ['kk', 'ru', 'en'],
         ];
+    }
+
+    public function buildLogoDataUri(): string
+    {
+        $path = public_path(self::LOGO_PATH);
+
+        if (! is_readable($path)) {
+            return '';
+        }
+
+        return 'data:image/jpeg;base64,'.base64_encode((string) file_get_contents($path));
     }
 
     public function render(ExamAttempt $attempt): string
