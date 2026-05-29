@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ExamTypeController;
 use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Public\ExamAttemptController;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Public\RegistrationTelegramController;
 use App\Http\Controllers\TelegramWebhookController;
@@ -42,6 +43,14 @@ Route::get('/register/{slug}/telegram/status', [RegistrationTelegramController::
 Route::post('/register/{slug}/telegram/verify', [RegistrationTelegramController::class, 'verify'])->name('public.registration.telegram.verify');
 Route::post('/register/{slug}/telegram/resend', [RegistrationTelegramController::class, 'resend'])->name('public.registration.telegram.resend');
 Route::post('/register/{slug}/telegram/reset', [RegistrationTelegramController::class, 'reset'])->name('public.registration.telegram.reset');
+
+// Public exam routes (token-based access)
+Route::get('/exam/{token}', [ExamAttemptController::class, 'show'])->name('public.exam.show');
+Route::post('/exam/{token}/start', [ExamAttemptController::class, 'start'])->name('public.exam.start');
+Route::get('/exam/{token}/take', [ExamAttemptController::class, 'take'])->name('public.exam.take');
+Route::post('/exam/{token}/answers', [ExamAttemptController::class, 'saveAnswer'])->name('public.exam.answers');
+Route::post('/exam/{token}/finish', [ExamAttemptController::class, 'finish'])->name('public.exam.finish');
+Route::get('/exam/{token}/complete', [ExamAttemptController::class, 'complete'])->name('public.exam.complete');
 
 // Telegram webhook
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');

@@ -1028,7 +1028,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                                             <p className="text-sm text-blue-800">
                                                 <strong>Обратите внимание:</strong> После отправки заявки ваши данные будут проверены.
-                                                Вы получите уведомление на email после одобрения.
+                                                После одобрения ссылка на экзамен придёт в Telegram.
                                             </p>
                                         </div>
 

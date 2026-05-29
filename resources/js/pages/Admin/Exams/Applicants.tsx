@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle, XCircle, Eye, Pencil, Trash2 } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
@@ -24,8 +24,7 @@ interface Applicant {
     email: string;
     identifier: string;
     phone: string;
-    verified: boolean;
-    exam_attempts_count: number;
+    language: string;
 }
 
 interface ExamRegistration {
@@ -60,6 +59,11 @@ interface ApplicantsProps {
 }
 
 export default function Applicants({ exam, registrations }: ApplicantsProps) {
+    const { errors, flash } = usePage<{
+        errors: { approve?: string };
+        flash: { success?: string };
+    }>().props;
+
     const handleDelete = (applicantId: number) => {
         if (confirm('Вы уверены, что хотите удалить этого абитуриента?')) {
             router.delete(route('admin.applicants.destroy', applicantId));
@@ -107,6 +111,18 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
                         </p>
                     </div>
 
+                    {flash?.success && (
+                        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                            {flash.success}
+                        </div>
+                    )}
+
+                    {errors?.approve && (
+                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                            {errors.approve}
+                        </div>
+                    )}
+
                     <Card>
                         <CardHeader>
                             <CardTitle>Список абитуриентов</CardTitle>
@@ -118,13 +134,13 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>ID</TableHead>
+                                        <TableHead>Имя</TableHead>
                                         <TableHead>ИИН</TableHead>
-                                        <TableHead>ФИО</TableHead>
                                         <TableHead>Email</TableHead>
                                         <TableHead>Телефон</TableHead>
-                                        <TableHead>Верификация</TableHead>
+                                        <TableHead>Язык</TableHead>
                                         <TableHead>Одобрение</TableHead>
-                                        <TableHead>Попытки</TableHead>
                                         <TableHead className="text-right">Действия</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -141,24 +157,19 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
 
                                             return (
                                                 <TableRow key={registration.id}>
-                                                    <TableCell className="font-mono">
-                                                        {applicant.identifier}
+                                                    <TableCell className="text-muted-foreground">
+                                                        {applicant.id}
                                                     </TableCell>
                                                     <TableCell className="font-medium">
                                                         {applicant.name}
                                                     </TableCell>
+                                                    <TableCell className="font-mono">
+                                                        {applicant.identifier}
+                                                    </TableCell>
                                                     <TableCell>{applicant.email}</TableCell>
                                                     <TableCell>{applicant.phone}</TableCell>
                                                     <TableCell>
-                                                        {applicant.verified ? (
-                                                            <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                                                                Верифицирован
-                                                            </span>
-                                                        ) : (
-                                                            <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
-                                                                Не верифицирован
-                                                            </span>
-                                                        )}
+                                                        {getLanguageName(applicant.language)}
                                                     </TableCell>
                                                     <TableCell>
                                                         {registration.approved ? (
@@ -177,11 +188,6 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
                                                                 Не одобрен
                                                             </span>
                                                         )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                                                            {applicant.exam_attempts_count}
-                                                        </span>
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">

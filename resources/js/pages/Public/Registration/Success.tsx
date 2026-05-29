@@ -36,15 +36,15 @@ export default function Success({ applicant }: SuccessProps) {
                                 <ul className="space-y-2 text-sm text-blue-800">
                                     <li>• Ваша заявка отправлена на проверку</li>
                                     <li>• Регистратор проверит ваши данные и документы</li>
-                                    <li>• После одобрения вы получите уведомление на email: {applicant.email}</li>
-                                    <li>• В письме будет ссылка для доступа к экзамену</li>
+                                    <li>• После одобрения вы получите ссылку на экзамен в Telegram</li>
+                                    <li>• Время на прохождение определяется настройками экзамена в админке</li>
                                 </ul>
                             </div>
 
                             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                                 <p className="text-sm text-yellow-800">
                                     <strong>Обратите внимание:</strong> Проверка заявки может занять некоторое время.
-                                    Пожалуйста, следите за вашей электронной почтой.
+                                    Следите за сообщениями от Telegram-бота.
                                 </p>
                             </div>
 

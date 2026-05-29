@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle, XCircle, Eye, Pencil, Trash2 } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
@@ -60,6 +60,11 @@ interface ApplicantsProps {
 }
 
 export default function Applicants({ examType, registrations }: ApplicantsProps) {
+    const { errors, flash } = usePage<{
+        errors: { approve?: string };
+        flash: { success?: string };
+    }>().props;
+
     const handleDelete = (applicantId: number) => {
         if (confirm('Вы уверены, что хотите удалить этого абитуриента?')) {
             router.delete(route('admin.applicants.destroy', applicantId));
@@ -106,6 +111,18 @@ export default function Applicants({ examType, registrations }: ApplicantsProps)
                             Записи на экзамены этого типа
                         </p>
                     </div>
+
+                    {flash?.success && (
+                        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                            {flash.success}
+                        </div>
+                    )}
+
+                    {errors?.approve && (
+                        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                            {errors.approve}
+                        </div>
+                    )}
 
                     <Card>
                         <CardHeader>

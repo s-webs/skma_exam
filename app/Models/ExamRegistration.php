@@ -34,4 +34,9 @@ class ExamRegistration extends Model
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
+
+    public function examAttempts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ExamAttempt::class);
+    }
 }

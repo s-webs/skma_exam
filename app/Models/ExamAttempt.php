@@ -12,6 +12,7 @@ class ExamAttempt extends Model
     protected $fillable = [
         'exam_id',
         'applicant_id',
+        'exam_registration_id',
         'token',
         'date',
         'started_at',
@@ -37,6 +38,11 @@ class ExamAttempt extends Model
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(Applicant::class);
+    }
+
+    public function examRegistration(): BelongsTo
+    {
+        return $this->belongsTo(ExamRegistration::class);
     }
 
     public function questions(): HasMany

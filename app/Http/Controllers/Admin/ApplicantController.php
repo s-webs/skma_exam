@@ -45,6 +45,14 @@ class ApplicantController extends Controller
             'photo' => 'nullable|image|max:2048',
         ]);
 
+        unset(
+            $validated['document_front'],
+            $validated['document_back'],
+            $validated['diplom'],
+            $validated['certificate'],
+            $validated['photo'],
+        );
+
         $applicant = Applicant::create($validated);
 
         // Загрузка файлов
@@ -112,6 +120,14 @@ class ApplicantController extends Controller
             'certificate' => 'nullable|image|max:2048',
             'photo' => 'nullable|image|max:2048',
         ]);
+
+        unset(
+            $validated['document_front'],
+            $validated['document_back'],
+            $validated['diplom'],
+            $validated['certificate'],
+            $validated['photo'],
+        );
 
         $applicant->update($validated);
 

@@ -98,14 +98,12 @@ class ExamController extends Controller
 
     public function applicants(Exam $exam)
     {
-        $registrations = ExamRegistration::where('exam_id', $exam->id)
-            ->with([
-                'applicant' => fn ($query) => $query->withCount([
-                    'examAttempts' => fn ($q) => $q->where('exam_id', $exam->id),
-                ]),
-                'approvedByUser:id,name',
-            ])
-            ->latest()
+        $registrations = ExamRegistration::query()
+            ->where('exam_registrations.exam_id', $exam->id)
+            ->join('applicants', 'exam_registrations.applicant_id', '=', 'applicants.id')
+            ->select('exam_registrations.*')
+            ->with(['applicant', 'approvedByUser:id,name'])
+            ->orderBy('applicants.id')
             ->paginate(30);
 
         return Inertia::render('Admin/Exams/Applicants', [

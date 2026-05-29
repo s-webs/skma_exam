@@ -107,19 +107,26 @@ class TelegramService
     }
 
     /**
-     * Отправить уведомление о начале экзамена
+     * Отправить ссылку на прохождение экзамена после одобрения
      */
-    public function sendExamNotification(string $chatId, string $examName, string $startTime): bool
-    {
+    public function sendExamInvite(
+        string $chatId,
+        string $examName,
+        string $examUrl,
+        int $durationMinutes
+    ): bool {
         try {
-            if (!$this->bot) {
+            if (! $this->bot) {
+                Log::error('Telegram bot token not configured');
+
                 return false;
             }
 
-            $message = "📝 <b>Напоминание об экзамене</b>\n\n";
+            $message = "✅ <b>Запись на экзамен одобрена</b>\n\n";
             $message .= "Экзамен: {$examName}\n";
-            $message .= "Время начала: {$startTime}\n\n";
-            $message .= "Не забудьте подготовиться!";
+            $message .= "Время на прохождение: {$durationMinutes} мин.\n";
+            $message .= "Отсчёт начнётся после нажатия кнопки «Начать экзамен».\n\n";
+            $message .= "🔗 <a href=\"{$examUrl}\">Перейти к экзамену</a>";
 
             $this->bot->sendMessage(
                 $chatId,
@@ -129,7 +136,8 @@ class TelegramService
 
             return true;
         } catch (Exception $e) {
-            Log::error('Failed to send Telegram notification: ' . $e->getMessage());
+            Log::error('Failed to send Telegram exam invite: '.$e->getMessage());
+
             return false;
         }
     }
