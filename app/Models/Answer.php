@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use App\Support\PublicStorageImage;
+use App\Models\Concerns\HasStorageImageUrl;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Answer extends Model
 {
+    use HasStorageImageUrl;
+
     protected $fillable = [
         'question_id',
         'content',
@@ -32,6 +34,6 @@ class Answer extends Model
 
     public function imageUrl(): ?string
     {
-        return PublicStorageImage::urlFor($this->image_path, ['answers', 'questions']);
+        return $this->storageImageUrl($this->image_path, 'answers');
     }
 }
