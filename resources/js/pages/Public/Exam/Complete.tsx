@@ -1,8 +1,10 @@
 import { Head } from '@inertiajs/react';
-import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface CompleteProps {
+    reportUrl: string;
     exam: { name: string };
     result: {
         passed: boolean;
@@ -20,7 +22,7 @@ function formatTime(seconds: number): string {
     return `${m} мин ${s} сек`;
 }
 
-export default function Complete({ exam, result }: CompleteProps) {
+export default function Complete({ reportUrl, exam, result }: CompleteProps) {
     return (
         <>
             <Head title={`Результат — ${exam.name}`} />
@@ -69,8 +71,15 @@ export default function Complete({ exam, result }: CompleteProps) {
                             </p>
 
                             <p className="text-center text-sm text-muted-foreground">
-                                Подробный результат также отправлен в Telegram.
+                                Подробный PDF-отчёт также отправлен в Telegram.
                             </p>
+
+                            <Button asChild className="h-12 w-full" size="lg">
+                                <a href={reportUrl} target="_blank" rel="noopener noreferrer">
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                    Скачать PDF-отчёт
+                                </a>
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

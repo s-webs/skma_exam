@@ -1,0 +1,145 @@
+<?php
+
+use App\Models\Answer;
+use App\Models\Applicant;
+use App\Models\Exam;
+use App\Models\ExamAttempt;
+use App\Models\ExamRegistration;
+use App\Models\ExamResult;
+use App\Models\ExamType;
+use App\Models\Question;
+use App\Models\User;
+use App\Services\ExamResultPdfService;
+use App\Services\TelegramService;
+use Database\Seeders\RoleSeeder;
+
+beforeEach(function () {
+    $this->seed(RoleSeeder::class);
+
+    $this->admin = User::factory()->create();
+
+    $this->examType = ExamType::create([
+        'name' => 'Test Type',
+        'slug' => 'test-type',
+        'description' => null,
+        'is_active' => true,
+    ]);
+
+    $this->exam = Exam::create([
+        'exam_type_id' => $this->examType->id,
+        'name' => 'Test Exam',
+        'description' => null,
+        'language' => 'ru',
+        'duration_minutes' => 45,
+        'questions_count' => 2,
+        'passing_score' => 1,
+        'max_attempts' => 1,
+        'is_active' => true,
+        'created_by_user_id' => $this->admin->id,
+    ]);
+
+    foreach (range(1, 2) as $i) {
+        $question = Question::create([
+            'exam_id' => $this->exam->id,
+            'content' => "Question {$i}",
+            'is_active' => true,
+            'created_by_user_id' => $this->admin->id,
+        ]);
+
+        Answer::create([
+            'question_id' => $question->id,
+            'content' => 'Wrong',
+            'is_correct' => false,
+            'created_by_user_id' => $this->admin->id,
+        ]);
+
+        Answer::create([
+            'question_id' => $question->id,
+            'content' => 'Correct',
+            'is_correct' => true,
+            'created_by_user_id' => $this->admin->id,
+        ]);
+    }
+
+    $this->applicant = Applicant::create([
+        'name' => 'Test Applicant',
+        'email' => 'test@example.com',
+        'identifier' => '123456789012',
+        'address' => 'Address',
+        'phone' => '+70000000000',
+        'graduate_organization' => 'Org',
+        'graduate_year' => '2020',
+        'speciality' => 'Spec',
+        'language' => 'ru',
+        'verified' => true,
+        'telegram_chat_id' => '99999',
+    ]);
+
+    $registration = ExamRegistration::create([
+        'applicant_id' => $this->applicant->id,
+        'exam_id' => $this->exam->id,
+        'approved' => true,
+    ]);
+
+    $this->attempt = ExamAttempt::create([
+        'exam_id' => $this->exam->id,
+        'applicant_id' => $this->applicant->id,
+        'exam_registration_id' => $registration->id,
+        'token' => str_repeat('a', 64),
+        'date' => now()->toDateString(),
+        'status' => 'completed',
+        'started_at' => now()->subMinutes(30),
+        'completed_at' => now(),
+    ]);
+
+    $this->attempt->questions()->create(['question_id' => Question::first()->id, 'question_order' => 1]);
+    $this->attempt->questions()->create(['question_id' => Question::skip(1)->first()->id, 'question_order' => 2]);
+
+    ExamResult::create([
+        'exam_attempt_id' => $this->attempt->id,
+        'total_questions' => 2,
+        'correct_answers' => 2,
+        'total_score' => 100,
+        'passing_score' => 1,
+        'passed' => true,
+        'time_spent_seconds' => 1800,
+    ]);
+});
+
+test('report pdf route returns pdf for completed attempt', function () {
+    $response = $this->get(route('public.exam.report', $this->attempt->token));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+    expect(str_starts_with($response->getContent(), '%PDF'))->toBeTrue();
+});
+
+test('report pdf route returns 404 for pending attempt', function () {
+    $pending = ExamAttempt::create([
+        'exam_id' => $this->exam->id,
+        'applicant_id' => $this->applicant->id,
+        'token' => str_repeat('b', 64),
+        'date' => now()->toDateString(),
+        'status' => 'pending',
+    ]);
+
+    $this->get(route('public.exam.report', $pending->token))->assertNotFound();
+});
+
+test('pdf service renders non empty binary', function () {
+    $pdf = app(ExamResultPdfService::class)->render($this->attempt);
+
+    expect(strlen($pdf))->toBeGreaterThan(1000);
+    expect(str_starts_with($pdf, '%PDF'))->toBeTrue();
+});
+
+test('finish sends telegram report with pdf', function () {
+    $this->mock(TelegramService::class, function ($mock) {
+        $mock->shouldReceive('sendExamResultsWithReport')
+            ->once()
+            ->andReturn(true);
+    });
+
+    $this->postJson(route('public.exam.finish', $this->attempt->token))
+        ->assertOk();
+});

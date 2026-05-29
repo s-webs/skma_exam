@@ -6,6 +6,7 @@ use App\Exceptions\ExamAttemptException;
 use App\Http\Controllers\Controller;
 use App\Models\ExamAttempt;
 use App\Services\ExamAttemptService;
+use App\Services\ExamResultPdfService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,6 +16,7 @@ class ExamAttemptController extends Controller
     public function __construct(
         protected ExamAttemptService $examAttemptService,
         protected TelegramService $telegramService,
+        protected ExamResultPdfService $examResultPdfService,
     ) {}
 
     public function show(string $token)
@@ -110,11 +112,11 @@ class ExamAttemptController extends Controller
 
             $attempt->load(['applicant', 'exam']);
             if ($attempt->applicant->telegram_chat_id) {
-                $this->telegramService->sendExamResults(
+                $this->telegramService->sendExamResultsWithReport(
                     $attempt->applicant->telegram_chat_id,
-                    $attempt->exam->name,
-                    $result->total_score,
-                    $result->passed
+                    $attempt,
+                    $result,
+                    $this->examResultPdfService
                 );
             }
         } catch (ExamAttemptException $e) {
@@ -151,6 +153,7 @@ class ExamAttemptController extends Controller
             'exam' => [
                 'name' => $attempt->exam->name,
             ],
+            'reportUrl' => $this->examResultPdfService->publicUrl($attempt),
             'result' => [
                 'passed' => $result->passed,
                 'total_score' => $result->total_score,

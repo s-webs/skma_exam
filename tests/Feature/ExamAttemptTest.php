@@ -145,7 +145,7 @@ test('finish calculates passed result', function () {
 
     $this->mock(TelegramService::class, function ($mock) {
         $mock->shouldReceive('sendExamInvite')->once()->andReturn(true);
-        $mock->shouldReceive('sendExamResults')->once()->andReturn(true);
+        $mock->shouldReceive('sendExamResultsWithReport')->once()->andReturn(true);
     });
 
     $this->actingAs($this->admin)

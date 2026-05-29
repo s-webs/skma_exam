@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Public\ExamAttemptController;
+use App\Http\Controllers\Public\ExamResultReportController;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Public\RegistrationTelegramController;
 use App\Http\Controllers\TelegramWebhookController;
@@ -51,6 +52,7 @@ Route::get('/exam/{token}/take', [ExamAttemptController::class, 'take'])->name('
 Route::post('/exam/{token}/answers', [ExamAttemptController::class, 'saveAnswer'])->name('public.exam.answers');
 Route::post('/exam/{token}/finish', [ExamAttemptController::class, 'finish'])->name('public.exam.finish');
 Route::get('/exam/{token}/complete', [ExamAttemptController::class, 'complete'])->name('public.exam.complete');
+Route::get('/exam/{token}/report.pdf', [ExamResultReportController::class, 'show'])->name('public.exam.report');
 
 // Telegram webhook
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');

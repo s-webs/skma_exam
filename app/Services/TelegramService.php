@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\ExamAttempt;
+use App\Models\ExamResult;
+use CURLFile;
+use Illuminate\Support\Facades\Log;
 use TelegramBot\Api\BotApi;
 use TelegramBot\Api\Exception;
-use Illuminate\Support\Facades\Log;
 
 class TelegramService
 {
@@ -143,34 +146,115 @@ class TelegramService
     }
 
     /**
-     * Отправить результаты экзамена
+     * Отправить результаты экзамена (текст + PDF-отчёт)
      */
-    public function sendExamResults(string $chatId, string $examName, int $score, bool $passed): bool
-    {
+    public function sendExamResultsWithReport(
+        string $chatId,
+        ExamAttempt $attempt,
+        ExamResult $result,
+        ExamResultPdfService $pdfService
+    ): bool {
+        $attempt->loadMissing(['exam']);
+        $examName = $attempt->exam->name;
+        $pdfUrl = $pdfService->publicUrl($attempt);
+
+        $messageSent = $this->sendExamResultsMessage(
+            $chatId,
+            $examName,
+            $result->total_score,
+            $result->passed,
+            $pdfUrl,
+            $attempt->exam->language ?? 'ru'
+        );
+
+        $documentSent = $this->sendExamResultsPdf($chatId, $attempt, $result, $pdfService);
+
+        return $messageSent || $documentSent;
+    }
+
+    public function sendExamResultsMessage(
+        string $chatId,
+        string $examName,
+        int $score,
+        bool $passed,
+        ?string $pdfUrl = null,
+        string $locale = 'ru'
+    ): bool {
         try {
-            if (!$this->bot) {
+            if (! $this->bot) {
                 return false;
             }
 
+            app()->setLocale($this->normalizeLocale($locale));
+
             $emoji = $passed ? '✅' : '❌';
-            $status = $passed ? 'Сдан' : 'Не сдан';
+            $status = $passed ? __('exam_report.passed') : __('exam_report.failed');
 
-            $message = "{$emoji} <b>Результаты экзамена</b>\n\n";
-            $message .= "Экзамен: {$examName}\n";
-            $message .= "Балл: {$score}\n";
-            $message .= "Статус: {$status}";
+            $message = "{$emoji} <b>".__('exam_report.exam_result')."</b>\n\n";
+            $message .= __('exam_report.subject').": {$examName}\n";
+            $message .= __('exam_report.result').": {$score}\n";
+            $message .= __('exam_report.status').": {$status}";
 
-            $this->bot->sendMessage(
-                $chatId,
-                $message,
-                'HTML'
-            );
+            if ($pdfUrl) {
+                $message .= "\n\n📄 <a href=\"{$pdfUrl}\">".__('exam_report.pdf_link')."</a>";
+            }
+
+            $this->bot->sendMessage($chatId, $message, 'HTML');
 
             return true;
         } catch (Exception $e) {
-            Log::error('Failed to send Telegram results: ' . $e->getMessage());
+            Log::error('Failed to send Telegram results: '.$e->getMessage());
+
             return false;
         }
+    }
+
+    public function sendExamResultsPdf(
+        string $chatId,
+        ExamAttempt $attempt,
+        ExamResult $result,
+        ExamResultPdfService $pdfService
+    ): bool {
+        if (! $this->bot) {
+            return false;
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'exam_report_');
+        if ($tempPath === false) {
+            return false;
+        }
+
+        try {
+            file_put_contents($tempPath, $pdfService->render($attempt));
+
+            app()->setLocale($this->normalizeLocale($attempt->exam->language ?? 'ru'));
+            $caption = __('exam_report.exam_result').': '.$attempt->exam->name."\n";
+            $caption .= __('exam_report.result').': '.$result->total_score.' — ';
+            $caption .= $result->passed ? __('exam_report.passed') : __('exam_report.failed');
+
+            $this->bot->call('sendDocument', [
+                'chat_id' => $chatId,
+                'document' => new CURLFile($tempPath, 'application/pdf', $pdfService->filename($attempt)),
+                'caption' => $caption,
+            ]);
+
+            return true;
+        } catch (Exception $e) {
+            Log::error('Failed to send Telegram exam PDF: '.$e->getMessage());
+
+            return false;
+        } finally {
+            @unlink($tempPath);
+        }
+    }
+
+    private function normalizeLocale(string $language): string
+    {
+        return match ($language) {
+            'kz', 'kk' => 'kk',
+            'en' => 'en',
+            default => 'ru',
+        };
     }
 
     /**
