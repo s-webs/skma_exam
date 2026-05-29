@@ -20,6 +20,26 @@ class RegistrationTelegramController extends Controller
     ): JsonResponse {
         $examType = ExamType::where('slug', $slug)->firstOrFail();
 
+        $preliminary = $request->validate([
+            'exam_id' => 'required|exists:exams,id',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email',
+            'identifier' => 'required|string|size:12',
+            'address' => 'required|string',
+            'phone' => 'required|string',
+        ]);
+
+        $normalizedIdentifier = $registrationTelegram->normalizePersonal($preliminary)['identifier'];
+        $existingByIdentifier = Applicant::where('identifier', $normalizedIdentifier)->first();
+
+        if ($existingByIdentifier) {
+            return response()->json([
+                'message' => 'Заявка с таким ИИН уже зарегистрирована. Продолжите подтверждение через Telegram.',
+                'can_resume' => true,
+                'existing_by' => 'identifier',
+            ], 422);
+        }
+
         try {
             $validated = $request->validate([
                 'exam_id' => 'required|exists:exams,id',
@@ -31,7 +51,7 @@ class RegistrationTelegramController extends Controller
             ]);
         } catch (ValidationException $e) {
             $errors = $e->errors();
-            $canResume = isset($errors['email']) || isset($errors['identifier']);
+            $canResume = isset($errors['identifier']);
 
             return response()->json([
                 'message' => collect($errors)->flatten()->first() ?? 'Ошибка проверки данных.',
@@ -45,13 +65,13 @@ class RegistrationTelegramController extends Controller
             return response()->json(['message' => 'Выбранный экзамен недоступен.'], 422);
         }
 
-        $personal = [
+        $personal = $registrationTelegram->normalizePersonal([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'identifier' => $validated['identifier'],
             'address' => $validated['address'],
             'phone' => $validated['phone'],
-        ];
+        ]);
 
         $registrationTelegram->clearSession($request);
 
@@ -78,8 +98,11 @@ class RegistrationTelegramController extends Controller
 
         $validated = $request->validate([
             'exam_id' => 'required|exists:exams,id',
+            'name' => 'required|string|max:255',
             'email' => 'required|email',
             'identifier' => 'required|string|size:12',
+            'address' => 'required|string',
+            'phone' => 'required|string',
         ]);
 
         $examBelongsToType = $examType->exams()->where('id', $validated['exam_id'])->exists();
@@ -87,35 +110,42 @@ class RegistrationTelegramController extends Controller
             return response()->json(['message' => 'Выбранный экзамен недоступен.'], 422);
         }
 
-        $byEmail = Applicant::where('email', $validated['email'])->first();
-        $byIdentifier = Applicant::where('identifier', $validated['identifier'])->first();
+        $personal = $registrationTelegram->normalizePersonal($validated);
 
-        if ($byEmail && $byIdentifier && $byEmail->id !== $byIdentifier->id) {
-            return response()->json([
-                'message' => 'Email и ИИН относятся к разным заявкам. Проверьте данные или обратитесь в приёмную комиссию.',
-            ], 422);
-        }
-
-        $applicant = $byEmail ?? $byIdentifier;
+        $applicant = Applicant::where('identifier', $personal['identifier'])->first();
 
         if (! $applicant) {
             return response()->json([
-                'message' => 'Заявка с такими данными не найдена.',
+                'message' => 'Заявка с таким ИИН не найдена.',
             ], 404);
         }
 
-        if ($applicant->email !== $validated['email'] || $applicant->identifier !== $validated['identifier']) {
+        $emailTaken = Applicant::where('email', $personal['email'])
+            ->where('id', '!=', $applicant->id)
+            ->exists();
+
+        if ($emailTaken) {
             return response()->json([
-                'message' => 'Укажите email и ИИН, совпадающие с вашей существующей заявкой.',
+                'message' => 'Этот email уже используется другой заявкой.',
+                'errors' => ['email' => ['Этот email уже используется другой заявкой.']],
             ], 422);
         }
+
+        $applicant->update([
+            'name' => $personal['name'],
+            'email' => $personal['email'],
+            'identifier' => $personal['identifier'],
+            'address' => $personal['address'],
+            'phone' => $personal['phone'],
+        ]);
 
         $registrationTelegram->clearSession($request);
 
         $result = $registrationTelegram->createDraftFromApplicant(
             $slug,
             (string) $validated['exam_id'],
-            $applicant
+            $applicant,
+            $personal
         );
 
         $request->session()->put(RegistrationTelegramService::SESSION_TOKEN_KEY, $result['token']);
@@ -125,8 +155,9 @@ class RegistrationTelegramController extends Controller
             'token' => $result['token'],
             'bot_username' => config('services.telegram.bot_username'),
             'bot_url' => $telegram->buildBotUrl(),
-            'linked' => false,
+            'linked' => $result['linked'],
             'verified' => false,
+            'resumed_from_existing' => true,
             'applicant' => [
                 'name' => $applicant->name,
                 'email' => $applicant->email,
@@ -138,6 +169,14 @@ class RegistrationTelegramController extends Controller
                 'speciality' => $applicant->speciality,
             ],
         ]);
+    }
+
+    public function reset(Request $request, string $slug, RegistrationTelegramService $registrationTelegram): JsonResponse
+    {
+        ExamType::where('slug', $slug)->firstOrFail();
+        $registrationTelegram->clearSession($request);
+
+        return response()->json(['ok' => true]);
     }
 
     public function status(

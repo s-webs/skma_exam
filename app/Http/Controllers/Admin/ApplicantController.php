@@ -12,7 +12,6 @@ class ApplicantController extends Controller
     public function index()
     {
         $applicants = Applicant::withCount('examAttempts')
-            ->with('approvedByUser:id,name')
             ->latest()
             ->paginate(30);
 
@@ -38,6 +37,7 @@ class ApplicantController extends Controller
             'graduate_year' => 'required|string',
             'speciality' => 'required|string',
             'language' => 'required|in:kz,ru,en',
+            'verified' => 'boolean',
             'document_front' => 'nullable|image|max:2048',
             'document_back' => 'nullable|image|max:2048',
             'diplom' => 'nullable|image|max:2048',
@@ -97,14 +97,15 @@ class ApplicantController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:applicants,email,' . $applicant->id,
-            'identifier' => 'required|string|size:12|unique:applicants,identifier,' . $applicant->id,
+            'email' => 'required|email|unique:applicants,email,'.$applicant->id,
+            'identifier' => 'required|string|size:12|unique:applicants,identifier,'.$applicant->id,
             'address' => 'required|string',
             'phone' => 'required|string',
             'graduate_organization' => 'required|string',
             'graduate_year' => 'required|string',
             'speciality' => 'required|string',
             'language' => 'required|in:kz,ru,en',
+            'verified' => 'boolean',
             'document_front' => 'nullable|image|max:2048',
             'document_back' => 'nullable|image|max:2048',
             'diplom' => 'nullable|image|max:2048',
@@ -154,27 +155,5 @@ class ApplicantController extends Controller
 
         return redirect()->route('admin.applicants.index')
             ->with('success', 'Абитуриент удален');
-    }
-
-    public function approve(Applicant $applicant)
-    {
-        $applicant->update([
-            'approved' => true,
-            'approved_at' => now(),
-            'approved_by' => auth()->id(),
-        ]);
-
-        return back()->with('success', 'Абитуриент одобрен');
-    }
-
-    public function unapprove(Applicant $applicant)
-    {
-        $applicant->update([
-            'approved' => false,
-            'approved_at' => null,
-            'approved_by' => null,
-        ]);
-
-        return back()->with('success', 'Одобрение отменено');
     }
 }

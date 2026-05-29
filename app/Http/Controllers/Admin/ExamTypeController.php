@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ExamRegistration;
 use App\Models\ExamType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -80,19 +81,18 @@ class ExamTypeController extends Controller
     {
         $examIds = $examType->exams()->pluck('id');
 
-        $applicants = \App\Models\Applicant::whereIn('language', function ($query) use ($examIds) {
-            $query->select('language')
-                ->from('exams')
-                ->whereIn('id', $examIds);
-        })
-            ->withCount('examAttempts')
-            ->with('approvedByUser:id,name')
+        $registrations = ExamRegistration::whereIn('exam_id', $examIds)
+            ->with([
+                'applicant',
+                'exam:id,name',
+                'approvedByUser:id,name',
+            ])
             ->latest()
             ->paginate(30);
 
         return Inertia::render('Admin/ExamTypes/Applicants', [
             'examType' => $examType,
-            'applicants' => $applicants,
+            'registrations' => $registrations,
         ]);
     }
 }

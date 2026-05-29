@@ -1,10 +1,18 @@
 import { Head, useForm } from '@inertiajs/react';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
     GraduationCap,
@@ -101,9 +109,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const [telegramError, setTelegramError] = useState<string | null>(null);
     const [telegramLoading, setTelegramLoading] = useState(false);
     const [resumeLoading, setResumeLoading] = useState(false);
-    const [canResumeExisting, setCanResumeExisting] = useState(false);
+    const [existingAccountModalOpen, setExistingAccountModalOpen] = useState(false);
+    const [existingAccountMessage, setExistingAccountMessage] = useState<string | null>(null);
+    const [loadedFromExistingApplicant, setLoadedFromExistingApplicant] = useState(false);
     const [initFieldErrors, setInitFieldErrors] = useState<Record<string, string[]>>({});
     const [verifyLoading, setVerifyLoading] = useState(false);
+    const personalEditInvalidatedRef = useRef(false);
 
     const { data, setData, post, processing, errors } = useForm({
         exam_id: '',
@@ -132,7 +143,14 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const canProceedToEducation = telegramVerified;
     const canProceedToDocuments = data.graduate_organization && data.graduate_year && data.speciality;
 
-    const resetTelegramState = useCallback(() => {
+    const resetTelegramSessionOnServer = useCallback(async () => {
+        await registrationJson(route('public.registration.telegram.reset', examType.slug), {
+            method: 'POST',
+        });
+    }, [examType.slug]);
+
+    const resetTelegramState = useCallback(async () => {
+        await resetTelegramSessionOnServer();
         setTelegramBotUrl(null);
         setVerificationToken(null);
         setTokenCopied(false);
@@ -140,7 +158,34 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setTelegramVerified(false);
         setVerificationCode('');
         setTelegramError(null);
-    }, []);
+        setLoadedFromExistingApplicant(false);
+    }, [resetTelegramSessionOnServer]);
+
+    const invalidateVerificationAfterPersonalChange = useCallback(async () => {
+        if (!telegramVerified && !verificationToken) {
+            return;
+        }
+
+        await resetTelegramSessionOnServer();
+        setTelegramVerified(false);
+        setTelegramLinked(false);
+        setVerificationCode('');
+        setVerificationToken(null);
+        setTelegramError('Личные данные изменены — нажмите «Продолжить» и снова пройдите Telegram.');
+    }, [telegramVerified, verificationToken, resetTelegramSessionOnServer]);
+
+    const handlePersonalFieldChange = (field: 'name' | 'email' | 'identifier' | 'address' | 'phone', value: string) => {
+        setData(field, value);
+        if ((!telegramVerified && !verificationToken) || personalEditInvalidatedRef.current) {
+            return;
+        }
+        personalEditInvalidatedRef.current = true;
+        void invalidateVerificationAfterPersonalChange();
+    };
+
+    const goBackToPersonal = () => {
+        void resetTelegramState().then(() => setCurrentStep('personal'));
+    };
 
     const copyVerificationToken = async () => {
         if (!verificationToken) {
@@ -194,6 +239,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         bot_url: string | null;
         linked: boolean;
         verified: boolean;
+        resumed_from_existing?: boolean;
         applicant?: {
             name: string;
             email: string;
@@ -211,42 +257,36 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setTelegramLinked(initData.linked);
         setTelegramVerified(initData.verified);
         setVerificationCode('');
-        setCanResumeExisting(false);
+        setExistingAccountModalOpen(false);
         setInitFieldErrors({});
+        setLoadedFromExistingApplicant(initData.resumed_from_existing === true);
+        personalEditInvalidatedRef.current = false;
 
         if (initData.applicant) {
             setData((current) => ({
                 ...current,
-                name: initData.applicant!.name,
-                email: initData.applicant!.email,
-                identifier: initData.applicant!.identifier,
-                address: initData.applicant!.address,
-                phone: initData.applicant!.phone,
-                graduate_organization: initData.applicant!.graduate_organization ?? '',
-                graduate_year: initData.applicant!.graduate_year ?? '',
-                speciality: initData.applicant!.speciality ?? '',
+                graduate_organization:
+                    current.graduate_organization ||
+                    initData.applicant!.graduate_organization ||
+                    '',
+                graduate_year:
+                    current.graduate_year || initData.applicant!.graduate_year || '',
+                speciality: current.speciality || initData.applicant!.speciality || '',
             }));
         }
 
         setCurrentStep('telegram');
     };
 
-    const isDuplicateAccountError = (fieldErrors?: Record<string, string[]>) => {
-        if (!fieldErrors) {
-            return false;
-        }
-
-        const duplicatePattern = /already been taken|уже занят|уже существует/i;
-
-        return ['email', 'identifier'].some((field) =>
-            fieldErrors[field]?.some((msg) => duplicatePattern.test(msg)),
-        );
-    };
+    const isExistingAccountByIdentifier = (
+        fieldErrors?: Record<string, string[]>,
+        canResume?: boolean,
+    ) => canResume === true || Boolean(fieldErrors?.identifier?.length);
 
     const initTelegramVerification = async () => {
         setTelegramLoading(true);
         setTelegramError(null);
-        setCanResumeExisting(false);
+        setExistingAccountModalOpen(false);
         setInitFieldErrors({});
 
         const result = await registrationJson<{
@@ -269,11 +309,16 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setTelegramLoading(false);
 
         if (!result.ok) {
-            setTelegramError(result.message);
-            if (result.errors) {
-                setInitFieldErrors(result.errors);
+            if (isExistingAccountByIdentifier(result.errors, result.can_resume)) {
+                setExistingAccountMessage(result.message);
+                setExistingAccountModalOpen(true);
+                setTelegramError(null);
+            } else {
+                setTelegramError(result.message);
+                if (result.errors) {
+                    setInitFieldErrors(result.errors);
+                }
             }
-            setCanResumeExisting(result.can_resume === true || isDuplicateAccountError(result.errors));
             return;
         }
 
@@ -289,6 +334,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
             bot_url: string | null;
             linked: boolean;
             verified: boolean;
+            resumed_from_existing: boolean;
             applicant: {
                 name: string;
                 email: string;
@@ -303,19 +349,30 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
             method: 'POST',
             body: JSON.stringify({
                 exam_id: data.exam_id,
+                name: data.name,
                 email: data.email,
                 identifier: data.identifier,
+                address: data.address,
+                phone: data.phone,
             }),
         });
 
         setResumeLoading(false);
 
         if (!result.ok) {
+            setExistingAccountModalOpen(false);
             setTelegramError(result.message);
+            if (result.errors) {
+                setInitFieldErrors(result.errors);
+            }
             return;
         }
 
         applyTelegramInitResult(result.data);
+    };
+
+    const handleResumeFromModal = () => {
+        void resumeExistingAccountVerification();
     };
 
     const verifyTelegramCode = async () => {
@@ -487,6 +544,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </p>
                                         </div>
 
+                                        {loadedFromExistingApplicant && (
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                                                Данные подставлены из вашей существующей заявки. Проверьте их
+                                                и при необходимости измените перед подтверждением в Telegram.
+                                            </div>
+                                        )}
+
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="name" className="flex items-center gap-2">
@@ -496,7 +560,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 <Input
                                                     id="name"
                                                     value={data.name}
-                                                    onChange={(e) => setData('name', e.target.value)}
+                                                    onChange={(e) => handlePersonalFieldChange('name', e.target.value)}
                                                     placeholder="Иванов Иван Иванович"
                                                     required
                                                     className="h-12"
@@ -515,7 +579,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     <Input
                                                         id="identifier"
                                                         value={data.identifier}
-                                                        onChange={(e) => setData('identifier', e.target.value)}
+                                                        onChange={(e) => handlePersonalFieldChange('identifier', e.target.value)}
                                                         maxLength={12}
                                                         placeholder="123456789012"
                                                         required
@@ -536,7 +600,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     <Input
                                                         id="phone"
                                                         value={data.phone}
-                                                        onChange={(e) => setData('phone', e.target.value)}
+                                                        onChange={(e) => handlePersonalFieldChange('phone', e.target.value)}
                                                         placeholder="+7 (___) ___-__-__"
                                                         required
                                                         className="h-12"
@@ -556,7 +620,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     id="email"
                                                     type="email"
                                                     value={data.email}
-                                                    onChange={(e) => setData('email', e.target.value)}
+                                                    onChange={(e) => handlePersonalFieldChange('email', e.target.value)}
                                                     placeholder="example@mail.com"
                                                     required
                                                     className="h-12"
@@ -576,7 +640,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 <Textarea
                                                     id="address"
                                                     value={data.address}
-                                                    onChange={(e) => setData('address', e.target.value)}
+                                                    onChange={(e) => handlePersonalFieldChange('address', e.target.value)}
                                                     placeholder="Город, улица, дом, квартира"
                                                     required
                                                     rows={3}
@@ -614,34 +678,8 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 )}
                                             </Button>
                                         </div>
-                                        {telegramError && !canResumeExisting && (
+                                        {telegramError && (
                                             <p className="text-sm text-red-600">{telegramError}</p>
-                                        )}
-
-                                        {canResumeExisting && (
-                                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
-                                                <p className="text-sm text-amber-900">
-                                                    {telegramError ||
-                                                        'Заявка с таким email или ИИН уже зарегистрирована.'}
-                                                </p>
-                                                <Button
-                                                    type="button"
-                                                    variant="secondary"
-                                                    className="w-full"
-                                                    size="lg"
-                                                    onClick={resumeExistingAccountVerification}
-                                                    disabled={resumeLoading || !data.email || !data.identifier}
-                                                >
-                                                    {resumeLoading ? (
-                                                        <>
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                            Загрузка...
-                                                        </>
-                                                    ) : (
-                                                        'У вас уже есть аккаунт, перейти к подтверждению'
-                                                    )}
-                                                </Button>
-                                            </div>
                                         )}
                                     </div>
                                 )}
@@ -656,6 +694,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 Привяжите Telegram и введите код из бота. Без этого шага продолжить регистрацию нельзя.
                                             </p>
                                         </div>
+
+                                        {loadedFromExistingApplicant && (
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                                                Вы продолжаете регистрацию существующей заявки. Личные данные должны
+                                                совпадать с теми, что вы подтвердите в Telegram.
+                                            </div>
+                                        )}
 
                                         <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5">
                                             {verificationToken && (
@@ -760,10 +805,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                         <div className="flex flex-col gap-3 sm:flex-row">
                                             <Button
                                                 type="button"
-                                                onClick={() => {
-                                                    resetTelegramState();
-                                                    setCurrentStep('personal');
-                                                }}
+                                                onClick={goBackToPersonal}
                                                 variant="outline"
                                                 className="flex-1"
                                                 size="lg"
@@ -1016,6 +1058,42 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                     </Card>
                 </div>
             </div>
+
+            <Dialog open={existingAccountModalOpen} onOpenChange={setExistingAccountModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>У вас уже есть аккаунт</DialogTitle>
+                        <DialogDescription>
+                            {existingAccountMessage ||
+                                'Заявка с таким ИИН уже зарегистрирована. Перейдите к подтверждению через Telegram, чтобы продолжить регистрацию.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setExistingAccountModalOpen(false)}
+                            disabled={resumeLoading}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleResumeFromModal}
+                            disabled={resumeLoading || !data.identifier}
+                        >
+                            {resumeLoading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Загрузка...
+                                </>
+                            ) : (
+                                'Перейти к подтверждению'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

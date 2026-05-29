@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Eye, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Eye, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,6 @@ interface Applicant {
     phone: string;
     language: string;
     verified: boolean;
-    approved: boolean;
-    approved_at: string | null;
-    approved_by_user: {
-        id: number;
-        name: string;
-    } | null;
     exam_attempts_count: number;
     created_at: string;
 }
@@ -49,16 +43,6 @@ export default function Index({ applicants }: IndexProps) {
     const handleDelete = (id: number) => {
         if (confirm(t('applicants.deleteConfirm'))) {
             router.delete(route('admin.applicants.destroy', id));
-        }
-    };
-
-    const handleApprove = (id: number) => {
-        router.post(route('admin.applicants.approve', id));
-    };
-
-    const handleUnapprove = (id: number) => {
-        if (confirm(t('applicants.unapproveConfirm'))) {
-            router.post(route('admin.applicants.unapprove', id));
         }
     };
 
@@ -109,7 +93,6 @@ export default function Index({ applicants }: IndexProps) {
                                         <TableHead>{t('applicants.phone')}</TableHead>
                                         <TableHead>{t('applicants.language')}</TableHead>
                                         <TableHead>{t('applicants.verification')}</TableHead>
-                                        <TableHead>{t('applicants.approval')}</TableHead>
                                         <TableHead>{t('applicants.attempts')}</TableHead>
                                         <TableHead className="text-right">{t('applicants.actions')}</TableHead>
                                     </TableRow>
@@ -117,7 +100,7 @@ export default function Index({ applicants }: IndexProps) {
                                 <TableBody>
                                     {applicants.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center text-muted-foreground">
+                                            <TableCell colSpan={8} className="text-center text-muted-foreground">
                                                 {t('applicants.noApplicants')}
                                             </TableCell>
                                         </TableRow>
@@ -147,49 +130,12 @@ export default function Index({ applicants }: IndexProps) {
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {applicant.approved ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                                                                {t('applicants.approved')}
-                                                            </span>
-                                                            {applicant.approved_by_user && (
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {applicant.approved_by_user.name}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-                                                            {t('applicants.notApproved')}
-                                                        </span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
                                                     <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
                                                         {applicant.exam_attempts_count}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        {!applicant.approved ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleApprove(applicant.id)}
-                                                                title={t('applicants.approve')}
-                                                            >
-                                                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleUnapprove(applicant.id)}
-                                                                title={t('applicants.unapprove')}
-                                                            >
-                                                                <XCircle className="h-4 w-4 text-orange-600" />
-                                                            </Button>
-                                                        )}
                                                         <Link href={route('admin.applicants.show', applicant.id)}>
                                                             <Button variant="ghost" size="sm">
                                                                 <Eye className="h-4 w-4" />

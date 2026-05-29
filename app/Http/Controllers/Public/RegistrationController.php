@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Public;
 
 use App\Http\Controllers\Controller;
 use App\Models\Applicant;
+use App\Models\Exam;
+use App\Models\ExamRegistration;
 use App\Models\ExamType;
 use App\Services\RegistrationTelegramService;
 use Illuminate\Http\Request;
@@ -71,14 +73,20 @@ class RegistrationController extends Controller
             'photo' => 'nullable|image|max:2048',
         ]);
 
-        $personal = $telegramDraft['personal'] ?? [];
-        foreach (['name', 'email', 'identifier', 'address', 'phone'] as $field) {
-            if (($personal[$field] ?? null) !== ($validated[$field] ?? null)) {
-                return back()->withErrors([
-                    'telegram' => 'Личные данные изменились после подтверждения Telegram. Пройдите верификацию снова.',
-                ]);
-            }
+        if (! $registrationTelegram->personalMatches($telegramDraft['personal'] ?? [], $validated)) {
+            $registrationTelegram->invalidateVerification($request);
+
+            return back()->withErrors([
+                'telegram' => 'Личные данные изменились после подтверждения Telegram. Вернитесь на шаг «Личные данные» и пройдите верификацию снова.',
+            ]);
         }
+
+        $normalizedPersonal = $registrationTelegram->normalizePersonal($validated);
+        $validated['name'] = $normalizedPersonal['name'];
+        $validated['email'] = $normalizedPersonal['email'];
+        $validated['identifier'] = $normalizedPersonal['identifier'];
+        $validated['address'] = $normalizedPersonal['address'];
+        $validated['phone'] = $normalizedPersonal['phone'];
 
         if ((string) $validated['exam_id'] !== (string) ($telegramDraft['exam_id'] ?? '')) {
             return back()->withErrors([
@@ -86,7 +94,7 @@ class RegistrationController extends Controller
             ]);
         }
 
-        $exam = \App\Models\Exam::findOrFail($validated['exam_id']);
+        $exam = Exam::findOrFail($validated['exam_id']);
         $validated['language'] = $exam->language;
         $validated['telegram_token'] = $request->session()->get(RegistrationTelegramService::SESSION_TOKEN_KEY);
         $validated['telegram_chat_id'] = $telegramDraft['chat_id'] ?? null;
@@ -125,6 +133,14 @@ class RegistrationController extends Controller
             $path = $request->file('photo')->store('applicants/photos', 'public');
             $applicant->update(['photo' => $path]);
         }
+
+        ExamRegistration::updateOrCreate(
+            [
+                'applicant_id' => $applicant->id,
+                'exam_id' => $validated['exam_id'],
+            ],
+            []
+        );
 
         $registrationTelegram->clearSession($request);
 

@@ -21,6 +21,63 @@ class RegistrationTelegramService
     }
 
     /**
+     * @param  array<string, mixed>  $personal
+     * @return array{name: string, email: string, identifier: string, address: string, phone: string}
+     */
+    public function normalizePersonal(array $personal): array
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', (string) ($personal['name'] ?? '')) ?? '');
+        $email = strtolower(trim((string) ($personal['email'] ?? '')));
+        $identifier = preg_replace('/\D+/', '', (string) ($personal['identifier'] ?? '')) ?? '';
+        $address = trim(preg_replace('/\s+/u', ' ', (string) ($personal['address'] ?? '')) ?? '');
+        $phone = preg_replace('/\D+/', '', (string) ($personal['phone'] ?? '')) ?? '';
+
+        return [
+            'name' => $name,
+            'email' => $email,
+            'identifier' => $identifier,
+            'address' => $address,
+            'phone' => $phone,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $draftPersonal
+     * @param  array<string, mixed>  $submitted
+     */
+    public function personalMatches(array $draftPersonal, array $submitted): bool
+    {
+        $draft = $this->normalizePersonal($draftPersonal);
+        $form = $this->normalizePersonal($submitted);
+
+        foreach (['name', 'email', 'identifier', 'address', 'phone'] as $field) {
+            if ($draft[$field] !== $form[$field]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function invalidateVerification(Request $request): void
+    {
+        $request->session()->forget(self::SESSION_VERIFIED_KEY);
+
+        $token = $request->session()->get(self::SESSION_TOKEN_KEY);
+        if (! $token) {
+            return;
+        }
+
+        $draft = $this->getDraft($token);
+        if (! $draft) {
+            return;
+        }
+
+        $draft['verified'] = false;
+        Cache::put($this->cacheKey($token), $draft, now()->addHours(2));
+    }
+
+    /**
      * @param  array{name: string, email: string, identifier: string, address: string, phone: string}  $personal
      * @return array{token: string}
      */
@@ -33,7 +90,7 @@ class RegistrationTelegramService
             'slug' => $slug,
             'exam_id' => $examId,
             'applicant_id' => null,
-            'personal' => $personal,
+            'personal' => $this->normalizePersonal($personal),
             'code' => $code,
             'code_expires_at' => now()->addMinutes(10)->timestamp,
             'chat_id' => null,
@@ -44,10 +101,15 @@ class RegistrationTelegramService
     }
 
     /**
+     * @param  array{name: string, email: string, identifier: string, address: string, phone: string}|null  $personalOverride
      * @return array{token: string, linked: bool}
      */
-    public function createDraftFromApplicant(string $slug, string $examId, Applicant $applicant): array
-    {
+    public function createDraftFromApplicant(
+        string $slug,
+        string $examId,
+        Applicant $applicant,
+        ?array $personalOverride = null
+    ): array {
         $token = $applicant->telegram_token ?? Str::random(32);
         if (! $applicant->telegram_token) {
             $applicant->telegram_token = $token;
@@ -57,17 +119,19 @@ class RegistrationTelegramService
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $chatId = $applicant->telegram_chat_id;
 
+        $personal = $personalOverride ?? $this->normalizePersonal([
+            'name' => $applicant->name,
+            'email' => $applicant->email,
+            'identifier' => $applicant->identifier,
+            'address' => $applicant->address,
+            'phone' => $applicant->phone,
+        ]);
+
         Cache::put($this->cacheKey($token), [
             'slug' => $slug,
             'exam_id' => $examId,
             'applicant_id' => $applicant->id,
-            'personal' => [
-                'name' => $applicant->name,
-                'email' => $applicant->email,
-                'identifier' => $applicant->identifier,
-                'address' => $applicant->address,
-                'phone' => $applicant->phone,
-            ],
+            'personal' => $personal,
             'code' => $code,
             'code_expires_at' => now()->addMinutes(10)->timestamp,
             'chat_id' => $chatId,

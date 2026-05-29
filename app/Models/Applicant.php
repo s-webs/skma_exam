@@ -18,9 +18,6 @@ class Applicant extends Model
         'speciality',
         'language',
         'verified',
-        'approved',
-        'approved_at',
-        'approved_by',
         'telegram_token',
         'telegram_chat_id',
         'document_front',
@@ -32,13 +29,11 @@ class Applicant extends Model
 
     protected $casts = [
         'verified' => 'boolean',
-        'approved' => 'boolean',
-        'approved_at' => 'datetime',
     ];
 
-    public function approvedByUser()
+    public function examRegistrations(): HasMany
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->hasMany(ExamRegistration::class);
     }
 
     public function examAttempts(): HasMany

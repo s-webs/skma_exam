@@ -1,14 +1,16 @@
 <?php
 
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ExamTypeController;
-use App\Http\Controllers\Admin\ExamController;
-use App\Http\Controllers\Admin\QuestionController;
 use App\Http\Controllers\Admin\ApplicantController;
+use App\Http\Controllers\Admin\ExamController;
+use App\Http\Controllers\Admin\ExamRegistrationController;
+use App\Http\Controllers\Admin\ExamTypeController;
+use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Public\RegistrationTelegramController;
 use App\Http\Controllers\TelegramWebhookController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -17,15 +19,17 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('admin.dashboard');
     }
+
     return redirect()->route('login');
 })->name('home');
 
 // Language switcher
-Route::post('/locale', function (Illuminate\Http\Request $request) {
+Route::post('/locale', function (Request $request) {
     $locale = $request->input('locale');
     if (in_array($locale, ['ru', 'kk', 'en'])) {
         $request->session()->put('locale', $locale);
     }
+
     return back();
 })->name('locale.set');
 
@@ -37,6 +41,7 @@ Route::post('/register/{slug}/telegram/resume', [RegistrationTelegramController:
 Route::get('/register/{slug}/telegram/status', [RegistrationTelegramController::class, 'status'])->name('public.registration.telegram.status');
 Route::post('/register/{slug}/telegram/verify', [RegistrationTelegramController::class, 'verify'])->name('public.registration.telegram.verify');
 Route::post('/register/{slug}/telegram/resend', [RegistrationTelegramController::class, 'resend'])->name('public.registration.telegram.resend');
+Route::post('/register/{slug}/telegram/reset', [RegistrationTelegramController::class, 'reset'])->name('public.registration.telegram.reset');
 
 // Telegram webhook
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
@@ -56,8 +61,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('dashboard', function () {
         return Inertia::render('Admin/Dashboard', [
             'auth' => [
-                'user' => auth()->user()->load('roles')
-            ]
+                'user' => auth()->user()->load('roles'),
+            ],
         ]);
     })->name('dashboard');
 
@@ -83,8 +88,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     // Applicant management (developer, ktbo, and registrator)
     Route::middleware(['role_or_permission:developer|ktbo|registrator'])->group(function () {
         Route::resource('applicants', ApplicantController::class);
-        Route::post('applicants/{applicant}/approve', [ApplicantController::class, 'approve'])->name('applicants.approve');
-        Route::post('applicants/{applicant}/unapprove', [ApplicantController::class, 'unapprove'])->name('applicants.unapprove');
+        Route::post('exam-registrations/{examRegistration}/approve', [ExamRegistrationController::class, 'approve'])->name('exam-registrations.approve');
+        Route::post('exam-registrations/{examRegistration}/unapprove', [ExamRegistrationController::class, 'unapprove'])->name('exam-registrations.unapprove');
     });
 });
 

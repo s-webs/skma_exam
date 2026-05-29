@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
+use App\Models\ExamRegistration;
 use App\Models\ExamType;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -97,15 +98,19 @@ class ExamController extends Controller
 
     public function applicants(Exam $exam)
     {
-        $applicants = \App\Models\Applicant::where('language', $exam->language)
-            ->withCount('examAttempts')
-            ->with('approvedByUser:id,name')
+        $registrations = ExamRegistration::where('exam_id', $exam->id)
+            ->with([
+                'applicant' => fn ($query) => $query->withCount([
+                    'examAttempts' => fn ($q) => $q->where('exam_id', $exam->id),
+                ]),
+                'approvedByUser:id,name',
+            ])
             ->latest()
             ->paginate(30);
 
         return Inertia::render('Admin/Exams/Applicants', [
             'exam' => $exam->load('examType'),
-            'applicants' => $applicants,
+            'registrations' => $registrations,
         ]);
     }
 }
