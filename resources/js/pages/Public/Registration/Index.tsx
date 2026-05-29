@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -289,15 +289,18 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         personalEditInvalidatedRef.current = false;
 
         if (initData.applicant) {
+            const applicant = initData.applicant;
             setData((current) => ({
                 ...current,
+                name: current.name || applicant.name || '',
+                email: current.email || applicant.email || '',
+                identifier: current.identifier || applicant.identifier || '',
+                address: current.address || applicant.address || '',
+                phone: current.phone || applicant.phone || '',
                 graduate_organization:
-                    current.graduate_organization ||
-                    initData.applicant!.graduate_organization ||
-                    '',
-                graduate_year:
-                    current.graduate_year || initData.applicant!.graduate_year || '',
-                speciality: current.speciality || initData.applicant!.speciality || '',
+                    current.graduate_organization || applicant.graduate_organization || '',
+                graduate_year: current.graduate_year || applicant.graduate_year || '',
+                speciality: current.speciality || applicant.speciality || '',
             }));
         }
 
@@ -425,19 +428,45 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
+
+        if (loadedFromExistingApplicant) {
+            if (currentStep !== 'education') {
+                return;
+            }
+        } else if (currentStep !== 'documents') {
+            return;
+        }
+
         post(route('public.registration.store', examType.slug));
     };
 
-    const steps = [
-        { id: 'exam', label: 'Экзамен', icon: GraduationCap },
-        { id: 'personal', label: 'Личные данные', icon: User },
-        { id: 'telegram', label: 'Telegram', icon: MessageCircle },
-        { id: 'education', label: 'Образование', icon: BookOpen },
-        { id: 'documents', label: 'Документы', icon: Upload },
-    ];
+    const allSteps = useMemo(
+        () => [
+            { id: 'exam' as const, label: 'Экзамен', icon: GraduationCap },
+            { id: 'personal' as const, label: 'Личные данные', icon: User },
+            { id: 'telegram' as const, label: 'Telegram', icon: MessageCircle },
+            { id: 'education' as const, label: 'Образование', icon: BookOpen },
+            { id: 'documents' as const, label: 'Документы', icon: Upload },
+        ],
+        [],
+    );
 
-    const getStepIndex = (step: string) => steps.findIndex(s => s.id === step);
+    const steps = useMemo(
+        () =>
+            loadedFromExistingApplicant
+                ? allSteps.filter((step) => step.id !== 'documents')
+                : allSteps,
+        [allSteps, loadedFromExistingApplicant],
+    );
+
+    const getStepIndex = (step: RegistrationStep) => steps.findIndex((s) => s.id === step);
     const currentStepIndex = getStepIndex(currentStep);
+
+    useEffect(() => {
+        if (loadedFromExistingApplicant && currentStep === 'documents') {
+            setCurrentStep('education');
+        }
+    }, [loadedFromExistingApplicant, currentStep]);
 
     return (
         <>
@@ -886,6 +915,14 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </p>
                                         </div>
 
+                                        {loadedFromExistingApplicant && (
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                                                Документы из вашей предыдущей заявки сохранятся. Повторно
+                                                загружать их не нужно — после проверки данных нажмите
+                                                «Зарегистрироваться».
+                                            </div>
+                                        )}
+
                                         <div className="space-y-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="graduate_organization" className="flex items-center gap-2">
@@ -954,21 +991,36 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             >
                                                 Назад
                                             </Button>
-                                            <Button
-                                                type="button"
-                                                onClick={() => setCurrentStep('documents')}
-                                                disabled={!canProceedToDocuments}
-                                                className="flex-1"
-                                                size="lg"
-                                            >
-                                                Продолжить
-                                            </Button>
+                                            {loadedFromExistingApplicant ? (
+                                                <Button
+                                                    type="submit"
+                                                    disabled={
+                                                        !canProceedToDocuments ||
+                                                        processing ||
+                                                        compressingField !== null
+                                                    }
+                                                    className="flex-1"
+                                                    size="lg"
+                                                >
+                                                    {processing ? 'Отправка...' : 'Зарегистрироваться'}
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => setCurrentStep('documents')}
+                                                    disabled={!canProceedToDocuments}
+                                                    className="flex-1"
+                                                    size="lg"
+                                                >
+                                                    Продолжить
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Step 4: Documents */}
-                                {currentStep === 'documents' && (
+                                {/* Step 5: Documents (only for new applicants) */}
+                                {!loadedFromExistingApplicant && currentStep === 'documents' && (
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
