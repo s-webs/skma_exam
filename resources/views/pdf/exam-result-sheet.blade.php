@@ -28,19 +28,18 @@
         .pdf-footer img { height: 32px; width: auto; opacity: 0.85; }
         .doc-header { width: 100%; margin-bottom: 16px; }
         .doc-header td { vertical-align: top; }
-        .title { font-size: 15px; font-weight: bold; text-transform: uppercase; margin: 0 0 8px 0; }
-        .meta { margin: 4px 0; }
+        .header-locale + .header-locale { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e5e5; }
+        .title { font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 0 0 6px 0; }
+        .meta { margin: 3px 0; }
         .meta strong { font-weight: bold; }
-        .qr { text-align: right; }
+        .qr { text-align: right; vertical-align: top; }
         .qr img { width: 88px; height: 88px; }
-        .qr-hint { font-size: 8px; color: #555; margin-top: 4px; max-width: 110px; margin-left: auto; }
         .locale-block { margin-bottom: 20px; page-break-inside: avoid; }
         .locale-block + .locale-block { border-top: 1px solid #ccc; padding-top: 16px; }
         .section-title { font-weight: bold; margin: 0 0 8px 0; font-size: 12px; }
         table.summary { width: 100%; border-collapse: collapse; margin-top: 4px; }
         table.summary th, table.summary td { border: 1px solid #333; padding: 6px 8px; text-align: left; }
         table.summary th { background: #f0f0f0; font-weight: bold; width: 55%; }
-        .status { margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -56,14 +55,17 @@
 <table class="doc-header" width="100%">
     <tr>
         <td width="72%">
-            <p class="title">{{ __('exam_report.title', [], 'ru') }}</p>
-            <p class="meta">{{ __('exam_report.based_on', ['id' => $attempt->id, 'date' => $completedDate], 'ru') }}</p>
-            <p class="meta"><strong>{{ __('exam_report.full_name', [], 'ru') }}:</strong> {{ $applicant->name }}</p>
-            <p class="meta"><strong>{{ __('exam_report.exam', [], 'ru') }}:</strong> {{ $exam->name }}</p>
+            @foreach ($locales as $locale)
+                @php app()->setLocale($locale); @endphp
+                <div class="header-locale">
+                    <p class="title">{{ __('exam_report.title') }}</p>
+                    <p class="meta">{{ __('exam_report.based_on', ['id' => $attempt->id, 'date' => $completedDate]) }}</p>
+                    <p class="meta"><strong>{{ __('exam_report.full_name') }}:</strong> {{ $applicant->name }}</p>
+                </div>
+            @endforeach
         </td>
         <td width="28%" class="qr">
             <img src="{{ $qrDataUri }}" alt="QR">
-            <p class="qr-hint">{{ __('exam_report.scan_hint', [], 'ru') }}</p>
         </td>
     </tr>
 </table>
@@ -75,6 +77,10 @@
 
         <table class="summary">
             <tbody>
+                <tr>
+                    <th>{{ __('exam_report.exam_type_and_name') }}</th>
+                    <td>{{ $exam->examType?->name ?? '—' }} / {{ $exam->name }}</td>
+                </tr>
                 <tr>
                     <th>{{ __('exam_report.correct_answers') }}</th>
                     <td>{{ $result->correct_answers }} / {{ $result->total_questions }}</td>

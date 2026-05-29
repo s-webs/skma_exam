@@ -140,6 +140,23 @@ test('pdf view data includes logo and single qr payload', function () {
     expect($data['qrDataUri'])->toStartWith('data:image/svg+xml;base64,');
 });
 
+test('pdf html includes trilingual header and exam type row without entrance wording', function () {
+    $html = view('pdf.exam-result-sheet', app(ExamResultPdfService::class)->buildViewData($this->attempt))->render();
+
+    expect($html)->toContain('Лист результатов экзамена')
+        ->and($html)->toContain('Емтихан нәтижелері парағы')
+        ->and($html)->toContain('Exam results sheet')
+        ->and($html)->not->toContain('вступительн')
+        ->and($html)->not->toContain('Entrance EXAM')
+        ->and($html)->not->toContain('Сканируйте QR')
+        ->and($html)->toContain('Test Type / Test Exam')
+        ->and($html)->toContain('Тип экзамена / Экзамен')
+        ->and($html)->toContain('Емтихан түрі / Емтихан')
+        ->and($html)->toContain('Exam type / Exam');
+
+    expect(substr_count($html, 'data:image/svg+xml;base64,'))->toBe(1);
+});
+
 test('finish sends telegram report with pdf', function () {
     $this->mock(TelegramService::class, function ($mock) {
         $mock->shouldReceive('sendExamResultsWithReport')

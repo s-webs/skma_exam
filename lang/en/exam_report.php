@@ -1,11 +1,12 @@
 <?php
 
 return [
-    'title' => 'Entrance EXAM SHEET',
+    'title' => 'Exam results sheet',
     'based_on' => 'Based on: ID :id dated :date',
     'full_name' => 'Full name',
     'exam_result' => 'Exam result',
     'exam' => 'Exam',
+    'exam_type_and_name' => 'Exam type / Exam',
     'correct_answers' => 'Correct answers',
     'total_score' => 'Total score',
     'passing_threshold' => 'Passing threshold',
