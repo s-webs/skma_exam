@@ -226,7 +226,7 @@ class ExamAttemptService
             ->orderBy('question_order')
             ->get();
 
-        return $attemptQuestions->map(function ($attemptQuestion) {
+        return $attemptQuestions->map(function ($attemptQuestion) use ($attempt) {
             $question = $attemptQuestion->question;
 
             return [
@@ -236,15 +236,32 @@ class ExamAttemptService
                 'image_url' => $question->image_path
                     ? '/storage/questions/'.$question->image_path
                     : null,
-                'answers' => $question->answers->map(fn (Answer $answer) => [
-                    'id' => $answer->id,
-                    'content' => $answer->content,
-                    'image_url' => $answer->image_path
-                        ? '/storage/answers/'.$answer->image_path
-                        : null,
-                ])->values()->all(),
+                'answers' => $this->shuffledAnswersPayload($attempt, $question),
             ];
         })->values()->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function shuffledAnswersPayload(ExamAttempt $attempt, Question $question): array
+    {
+        return $question->answers
+            ->sortBy(fn (Answer $answer) => $this->answerShuffleKey($attempt->id, $question->id, $answer->id))
+            ->values()
+            ->map(fn (Answer $answer) => [
+                'id' => $answer->id,
+                'content' => $answer->content,
+                'image_url' => $answer->image_path
+                    ? '/storage/answers/'.$answer->image_path
+                    : null,
+            ])
+            ->all();
+    }
+
+    private function answerShuffleKey(int $attemptId, int $questionId, int $answerId): string
+    {
+        return hash('xxh128', "{$attemptId}:{$questionId}:{$answerId}");
     }
 
     /**

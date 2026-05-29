@@ -8,6 +8,7 @@ use App\Models\ExamRegistration;
 use App\Models\ExamType;
 use App\Models\Question;
 use App\Models\User;
+use App\Services\ExamAttemptService;
 use App\Services\TelegramService;
 use Database\Seeders\RoleSeeder;
 use Spatie\Permission\Models\Role;
@@ -138,6 +139,47 @@ test('start sets expires_at from exam duration', function () {
     expect($attempt->status)->toBe('in_progress');
     expect($attempt->started_at)->not->toBeNull();
     expect($attempt->expires_at->equalTo($attempt->started_at->copy()->addMinutes(45)))->toBeTrue();
+});
+
+test('exam payload shuffles answers deterministically per attempt', function () {
+    $question = Question::first();
+    Answer::create([
+        'question_id' => $question->id,
+        'content' => 'Extra A',
+        'is_correct' => false,
+        'created_by_user_id' => $this->admin->id,
+    ]);
+    Answer::create([
+        'question_id' => $question->id,
+        'content' => 'Extra B',
+        'is_correct' => false,
+        'created_by_user_id' => $this->admin->id,
+    ]);
+
+    $this->applicant->update(['telegram_chat_id' => '12345']);
+
+    $this->mock(TelegramService::class, function ($mock) {
+        $mock->shouldReceive('sendExamInvite')->once()->andReturn(true);
+    });
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $this->registration));
+
+    $attempt = ExamAttempt::first();
+    $service = app(ExamAttemptService::class);
+
+    $payload = $service->buildQuestionsPayload($attempt);
+    $questionPayload = collect($payload)->firstWhere('id', $question->id);
+    $dbOrder = $question->answers()->orderBy('id')->pluck('id')->all();
+    $payloadOrder = collect($questionPayload['answers'])->pluck('id')->all();
+
+    expect($payloadOrder)->not->toEqual($dbOrder);
+
+    $payloadAgain = $service->buildQuestionsPayload($attempt->fresh());
+    $payloadAgainOrder = collect($payloadAgain)->firstWhere('id', $question->id)['answers'];
+    $payloadAgainOrder = collect($payloadAgainOrder)->pluck('id')->all();
+
+    expect($payloadAgainOrder)->toEqual($payloadOrder);
 });
 
 test('finish calculates passed result', function () {
