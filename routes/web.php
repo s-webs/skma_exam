@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Public\ExamAttemptController;
 use App\Http\Controllers\Public\ExamResultReportController;
+use App\Http\Controllers\Public\PublicMediaController;
 use App\Http\Controllers\Public\RegistrationController;
 use App\Http\Controllers\Public\RegistrationTelegramController;
 use App\Http\Controllers\TelegramWebhookController;
@@ -45,6 +46,11 @@ Route::get('/register/{slug}/telegram/status', [RegistrationTelegramController::
 Route::post('/register/{slug}/telegram/verify', [RegistrationTelegramController::class, 'verify'])->name('public.registration.telegram.verify');
 Route::post('/register/{slug}/telegram/resend', [RegistrationTelegramController::class, 'resend'])->name('public.registration.telegram.resend');
 Route::post('/register/{slug}/telegram/reset', [RegistrationTelegramController::class, 'reset'])->name('public.registration.telegram.reset');
+
+// Public media (exam question/answer images; avoids /storage 403 on some hosts)
+Route::get('/media/{filename}', [PublicMediaController::class, 'show'])
+    ->where('filename', '[a-zA-Z0-9._-]+')
+    ->name('public.media.show');
 
 // Public exam routes (token-based access)
 Route::get('/exam/{token}', [ExamAttemptController::class, 'show'])->name('public.exam.show');

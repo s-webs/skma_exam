@@ -249,5 +249,34 @@ test('answer image url resolves legacy files stored under questions directory', 
     $answerPayload = collect($questionPayload['answers'])->firstWhere('id', $answer->id);
 
     expect($answerPayload['image_url'])->toContain('legacy-answer.png');
-    expect($answerPayload['image_url'])->toContain('/storage/questions/');
+    expect($answerPayload['image_url'])->toContain('/media/legacy-answer.png');
+
+    $this->get($answerPayload['image_url'])->assertOk();
+});
+
+test('media route serves legacy answer file from questions directory', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('questions/8LfJCWKf82answers.png', 'fake-png');
+
+    $this->get(route('public.media.show', ['filename' => '8LfJCWKf82answers.png']))
+        ->assertOk();
+});
+
+test('media route serves files placed directly under public/storage', function () {
+    $dir = public_path('storage/questions');
+    if (! is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    $path = $dir.DIRECTORY_SEPARATOR.'N6w60qq94yquestions.png';
+    file_put_contents($path, 'fake-png');
+
+    try {
+        $this->get(route('public.media.show', ['filename' => 'N6w60qq94yquestions.png']))
+            ->assertOk();
+    } finally {
+        if (is_file($path)) {
+            unlink($path);
+        }
+    }
 });
