@@ -15,6 +15,7 @@ interface Answer {
     id?: number;
     content: string;
     image_path?: string | null;
+    image_url?: string | null;
     image?: File | null;
     is_correct: boolean;
 }
@@ -24,6 +25,7 @@ interface Question {
     exam_id: number;
     content: string;
     image_path: string | null;
+    image_url: string | null;
     explanation: string | null;
     is_active: boolean;
     answers: Answer[];
@@ -156,10 +158,10 @@ export default function Edit({ question }: EditProps) {
 
                                 <div className="space-y-2">
                                     <Label htmlFor="image">{t('questions.questionImage')}</Label>
-                                    {question.image_path && (
+                                    {question.image_url && (
                                         <div className="mb-2">
                                             <img
-                                                src={`/storage/questions/${question.image_path}`}
+                                                src={question.image_url}
                                                 alt="Question"
                                                 className="max-w-xs rounded border"
                                             />
@@ -233,10 +235,10 @@ export default function Edit({ question }: EditProps) {
 
                                     {answers.map((answer, index) => (
                                         <div key={index} className="space-y-2 rounded-lg border p-4">
-                                            {(answer.image_path || answer.image) && (
+                                            {(answer.image_url || answer.image) && (
                                                 <div className="mb-2">
                                                     <img
-                                                        src={answer.image ? URL.createObjectURL(answer.image) : `/storage/answers/${answer.image_path}`}
+                                                        src={answer.image ? URL.createObjectURL(answer.image) : (answer.image_url ?? '')}
                                                         alt={`Answer ${index + 1}`}
                                                         className="max-w-xs rounded border"
                                                     />

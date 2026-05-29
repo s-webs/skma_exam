@@ -8,7 +8,6 @@ use App\Models\Question;
 use App\Services\ImageOptimizationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Str;
 
 class QuestionController extends Controller
 {
@@ -46,20 +45,20 @@ class QuestionController extends Controller
         ]);
 
         // Проверяем что у вопроса есть либо текст либо изображение
-        if (empty($validated['content']) && !$request->hasFile('image')) {
+        if (empty($validated['content']) && ! $request->hasFile('image')) {
             return back()->withErrors(['content' => 'Необходимо заполнить текст вопроса или загрузить изображение']);
         }
 
         // Проверяем что у каждого ответа есть либо текст либо изображение
         foreach ($validated['answers'] as $index => $answer) {
-            if (empty($answer['content']) && !$request->hasFile("answers.{$index}.image")) {
-                return back()->withErrors(["answers.{$index}.content" => "Ответ " . ($index + 1) . ": необходимо заполнить текст или загрузить изображение"]);
+            if (empty($answer['content']) && ! $request->hasFile("answers.{$index}.image")) {
+                return back()->withErrors(["answers.{$index}.content" => 'Ответ '.($index + 1).': необходимо заполнить текст или загрузить изображение']);
             }
         }
 
         // Проверяем что есть хотя бы один правильный ответ
         $hasCorrectAnswer = collect($validated['answers'])->contains('is_correct', true);
-        if (!$hasCorrectAnswer) {
+        if (! $hasCorrectAnswer) {
             return back()->withErrors(['answers' => 'Должен быть хотя бы один правильный ответ']);
         }
 
@@ -107,7 +106,23 @@ class QuestionController extends Controller
         $question->load('answers', 'exam');
 
         return Inertia::render('Admin/Questions/Edit', [
-            'question' => $question,
+            'question' => [
+                'id' => $question->id,
+                'exam_id' => $question->exam_id,
+                'content' => $question->content,
+                'image_path' => $question->image_path,
+                'image_url' => $question->imageUrl(),
+                'explanation' => $question->explanation,
+                'is_active' => $question->is_active,
+                'exam' => $question->exam->only(['id', 'name']),
+                'answers' => $question->answers->map(fn ($answer) => [
+                    'id' => $answer->id,
+                    'content' => $answer->content,
+                    'image_path' => $answer->image_path,
+                    'image_url' => $answer->imageUrl(),
+                    'is_correct' => $answer->is_correct,
+                ])->values()->all(),
+            ],
         ]);
     }
 
@@ -126,7 +141,7 @@ class QuestionController extends Controller
         ]);
 
         // Проверяем что у вопроса есть либо текст либо изображение
-        if (empty($validated['content']) && !$request->hasFile('image') && !$question->image_path) {
+        if (empty($validated['content']) && ! $request->hasFile('image') && ! $question->image_path) {
             return back()->withErrors(['content' => 'Необходимо заполнить текст вопроса или загрузить изображение']);
         }
 
@@ -135,13 +150,13 @@ class QuestionController extends Controller
             $existingAnswer = isset($answerData['id']) ? $question->answers()->find($answerData['id']) : null;
             $hasExistingImage = $existingAnswer && $existingAnswer->image_path;
 
-            if (empty($answerData['content']) && !$request->hasFile("answers.{$index}.image") && !$hasExistingImage) {
-                return back()->withErrors(["answers.{$index}.content" => "Ответ " . ($index + 1) . ": необходимо заполнить текст или загрузить изображение"]);
+            if (empty($answerData['content']) && ! $request->hasFile("answers.{$index}.image") && ! $hasExistingImage) {
+                return back()->withErrors(["answers.{$index}.content" => 'Ответ '.($index + 1).': необходимо заполнить текст или загрузить изображение']);
             }
         }
 
         $hasCorrectAnswer = collect($validated['answers'])->contains('is_correct', true);
-        if (!$hasCorrectAnswer) {
+        if (! $hasCorrectAnswer) {
             return back()->withErrors(['answers' => 'Должен быть хотя бы один правильный ответ']);
         }
 

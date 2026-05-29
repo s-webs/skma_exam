@@ -11,6 +11,11 @@ class PublicStorageImage
     /** @var array<string, string|null> */
     private static array $absolutePathCache = [];
 
+    public static function clearCache(): void
+    {
+        self::$absolutePathCache = [];
+    }
+
     /**
      * @param  array<int, string>  $directories
      */
@@ -202,7 +207,7 @@ class PublicStorageImage
         $preferred = $directories;
 
         if (str_contains($lower, 'answers')) {
-            $preferred = ['questions', 'answers'];
+            $preferred = ['answers', 'questions'];
         } elseif (str_contains($lower, 'questions')) {
             $preferred = ['questions', 'answers'];
         }

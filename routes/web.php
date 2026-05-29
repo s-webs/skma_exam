@@ -52,6 +52,12 @@ Route::get('/exam-media/{filename}', [PublicMediaController::class, 'show'])
     ->where('filename', '[a-zA-Z0-9._-]+')
     ->name('public.exam-media.show');
 
+// Legacy URLs (open tabs / old deploy); prefer nginx rewrite — see deploy/nginx-exam-media.conf.example
+Route::get('/media/{filename}', function (string $filename) {
+    return redirect()->route('public.exam-media.show', ['filename' => $filename], 301);
+})->where('filename', '[a-zA-Z0-9._-]+')
+    ->name('public.media.legacy');
+
 // Public exam routes (token-based access)
 Route::get('/exam/{token}', [ExamAttemptController::class, 'show'])->name('public.exam.show');
 Route::post('/exam/{token}/start', [ExamAttemptController::class, 'start'])->name('public.exam.start');

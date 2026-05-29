@@ -20,8 +20,10 @@ class PublicMediaController extends Controller
             abort(404);
         }
 
+        $mime = is_file($absolutePath) ? (mime_content_type($absolutePath) ?: null) : null;
+
         return response()->file($absolutePath, [
-            'Content-Type' => mime_content_type($absolutePath) ?: 'application/octet-stream',
+            'Content-Type' => $mime ?? 'application/octet-stream',
             'Cache-Control' => 'public, max-age=86400',
         ]);
     }

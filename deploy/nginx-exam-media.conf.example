@@ -1,0 +1,10 @@
+# Include inside server { } for exam.skma.edu.kz (before generic location ~* \.(png|jpg|...)$ if any).
+# Ensures /exam-media/* reaches Laravel; rewrites legacy /media/* from old exam tabs.
+
+location ^~ /exam-media/ {
+    try_files $uri /index.php?$query_string;
+}
+
+location ^~ /media/ {
+    rewrite ^/media/(.+)$ /exam-media/$1 last;
+}

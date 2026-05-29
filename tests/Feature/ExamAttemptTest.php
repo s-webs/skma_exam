@@ -10,11 +10,12 @@ use App\Models\Question;
 use App\Models\User;
 use App\Services\ExamAttemptService;
 use App\Services\TelegramService;
+use App\Support\PublicStorageImage;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
+    PublicStorageImage::clearCache();
     $this->seed(RoleSeeder::class);
 
     $this->admin = User::factory()->create();
@@ -277,4 +278,59 @@ test('exam-media route serves files placed directly under public/storage', funct
             unlink($path);
         }
     }
+});
+
+test('exam take page image_url uses exam-media not legacy media path', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('questions/N6w60qq94yquestions.png', 'fake-question-png');
+    Storage::disk('public')->put('answers/8LfJCWKf82answers.png', 'fake-answer-png');
+
+    $question = Question::first();
+    $question->update(['image_path' => 'N6w60qq94yquestions.png']);
+
+    $answer = $question->answers()->first();
+    $answer->update(['image_path' => '8LfJCWKf82answers.png', 'content' => '']);
+
+    $this->applicant->update(['telegram_chat_id' => '12345']);
+
+    $this->mock(TelegramService::class, function ($mock) {
+        $mock->shouldReceive('sendExamInvite')->once()->andReturn(true);
+    });
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $this->registration));
+
+    $attempt = ExamAttempt::first();
+    $this->post(route('public.exam.start', $attempt->token));
+
+    $this->get(route('public.exam.take', $attempt->token))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Public/Exam/Take')
+            ->where('questions', function ($questions) use ($question, $answer) {
+                $payload = collect($questions)->firstWhere('id', $question->id);
+                expect($payload['image_url'])->toContain('/exam-media/N6w60qq94yquestions.png')
+                    ->and($payload['image_url'])->not->toContain('/media/');
+
+                $answerPayload = collect($payload['answers'])->firstWhere('id', $answer->id);
+                expect($answerPayload['image_url'])->toContain('/exam-media/8LfJCWKf82answers.png')
+                    ->and($answerPayload['image_url'])->not->toContain('/media/');
+
+                return true;
+            })
+        );
+});
+
+test('legacy media url redirects to exam-media', function () {
+    $this->get('/media/N6w60qq94yquestions.png')
+        ->assertRedirect(route('public.exam-media.show', ['filename' => 'N6w60qq94yquestions.png']));
+});
+
+test('exam-media serves answer png from answers directory', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('answers/8LfJCWKf82answers.png', 'fake-png');
+
+    $this->get(route('public.exam-media.show', ['filename' => '8LfJCWKf82answers.png']))
+        ->assertOk()
+        ->assertHeader('content-type');
 });

@@ -1,2 +1,4 @@
 # Include inside server { } for exam.skma.edu.kz (nginx + php-fpm)
 client_max_body_size 24M;
+
+# Exam question/answer images — see deploy/nginx-exam-media.conf.example
