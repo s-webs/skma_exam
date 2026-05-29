@@ -14,6 +14,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { compressImageFile } from '@/lib/compress-image';
 import {
     GraduationCap,
     User,
@@ -114,7 +115,32 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const [loadedFromExistingApplicant, setLoadedFromExistingApplicant] = useState(false);
     const [initFieldErrors, setInitFieldErrors] = useState<Record<string, string[]>>({});
     const [verifyLoading, setVerifyLoading] = useState(false);
+    const [compressingField, setCompressingField] = useState<string | null>(null);
     const personalEditInvalidatedRef = useRef(false);
+
+    type DocumentField =
+        | 'document_front'
+        | 'document_back'
+        | 'diplom'
+        | 'certificate'
+        | 'photo';
+
+    const handleDocumentFile = async (field: DocumentField, file: File | null) => {
+        if (!file) {
+            setData(field, null);
+            return;
+        }
+
+        setCompressingField(field);
+        try {
+            const compressed = await compressImageFile(file);
+            setData(field, compressed);
+        } catch {
+            setData(field, file);
+        } finally {
+            setCompressingField(null);
+        }
+    };
 
     const { data, setData, post, processing, errors } = useForm({
         exam_id: '',
@@ -949,9 +975,14 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 Документы
                                             </h2>
                                             <p className="text-gray-600">
-                                                Загрузите необходимые документы (необязательно)
+                                                Загрузите фото документов (необязательно). Снимки с телефона
+                                                автоматически сжимаются перед отправкой.
                                             </p>
                                         </div>
+
+                                        {errors.documents && (
+                                            <p className="text-sm text-red-600">{errors.documents}</p>
+                                        )}
 
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div className="space-y-2">
@@ -960,9 +991,18 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     id="document_front"
                                                     type="file"
                                                     accept="image/*"
-                                                    onChange={(e) => setData('document_front', e.target.files?.[0] || null)}
+                                                    disabled={compressingField === 'document_front'}
+                                                    onChange={(e) =>
+                                                        void handleDocumentFile(
+                                                            'document_front',
+                                                            e.target.files?.[0] || null,
+                                                        )
+                                                    }
                                                     className="h-12"
                                                 />
+                                                {compressingField === 'document_front' && (
+                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                )}
                                                 {errors.document_front && (
                                                     <p className="text-sm text-red-600">{errors.document_front}</p>
                                                 )}
@@ -974,9 +1014,18 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     id="document_back"
                                                     type="file"
                                                     accept="image/*"
-                                                    onChange={(e) => setData('document_back', e.target.files?.[0] || null)}
+                                                    disabled={compressingField === 'document_back'}
+                                                    onChange={(e) =>
+                                                        void handleDocumentFile(
+                                                            'document_back',
+                                                            e.target.files?.[0] || null,
+                                                        )
+                                                    }
                                                     className="h-12"
                                                 />
+                                                {compressingField === 'document_back' && (
+                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                )}
                                                 {errors.document_back && (
                                                     <p className="text-sm text-red-600">{errors.document_back}</p>
                                                 )}
@@ -988,9 +1037,15 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     id="diplom"
                                                     type="file"
                                                     accept="image/*"
-                                                    onChange={(e) => setData('diplom', e.target.files?.[0] || null)}
+                                                    disabled={compressingField === 'diplom'}
+                                                    onChange={(e) =>
+                                                        void handleDocumentFile('diplom', e.target.files?.[0] || null)
+                                                    }
                                                     className="h-12"
                                                 />
+                                                {compressingField === 'diplom' && (
+                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                )}
                                                 {errors.diplom && (
                                                     <p className="text-sm text-red-600">{errors.diplom}</p>
                                                 )}
@@ -1002,9 +1057,18 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     id="certificate"
                                                     type="file"
                                                     accept="image/*"
-                                                    onChange={(e) => setData('certificate', e.target.files?.[0] || null)}
+                                                    disabled={compressingField === 'certificate'}
+                                                    onChange={(e) =>
+                                                        void handleDocumentFile(
+                                                            'certificate',
+                                                            e.target.files?.[0] || null,
+                                                        )
+                                                    }
                                                     className="h-12"
                                                 />
+                                                {compressingField === 'certificate' && (
+                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                )}
                                                 {errors.certificate && (
                                                     <p className="text-sm text-red-600">{errors.certificate}</p>
                                                 )}
@@ -1016,9 +1080,15 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     id="photo"
                                                     type="file"
                                                     accept="image/*"
-                                                    onChange={(e) => setData('photo', e.target.files?.[0] || null)}
+                                                    disabled={compressingField === 'photo'}
+                                                    onChange={(e) =>
+                                                        void handleDocumentFile('photo', e.target.files?.[0] || null)
+                                                    }
                                                     className="h-12"
                                                 />
+                                                {compressingField === 'photo' && (
+                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                )}
                                                 {errors.photo && (
                                                     <p className="text-sm text-red-600">{errors.photo}</p>
                                                 )}
@@ -1044,7 +1114,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </Button>
                                             <Button
                                                 type="submit"
-                                                disabled={processing}
+                                                disabled={processing || compressingField !== null}
                                                 className="flex-1"
                                                 size="lg"
                                             >

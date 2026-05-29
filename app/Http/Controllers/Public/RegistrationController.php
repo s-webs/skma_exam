@@ -7,6 +7,7 @@ use App\Models\Applicant;
 use App\Models\Exam;
 use App\Models\ExamRegistration;
 use App\Models\ExamType;
+use App\Services\ImageOptimizationService;
 use App\Services\RegistrationTelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -108,30 +109,31 @@ class RegistrationController extends Controller
             $applicant = Applicant::create($validated);
         }
 
-        // Handle file uploads
+        $imageService = app(ImageOptimizationService::class);
+
         if ($request->hasFile('document_front')) {
-            $path = $request->file('document_front')->store('applicants/documents', 'public');
-            $applicant->update(['document_front' => $path]);
+            $filename = $imageService->optimizeAndStore($request->file('document_front'), 'applicants/documents');
+            $applicant->update(['document_front' => 'applicants/documents/'.$filename]);
         }
 
         if ($request->hasFile('document_back')) {
-            $path = $request->file('document_back')->store('applicants/documents', 'public');
-            $applicant->update(['document_back' => $path]);
+            $filename = $imageService->optimizeAndStore($request->file('document_back'), 'applicants/documents');
+            $applicant->update(['document_back' => 'applicants/documents/'.$filename]);
         }
 
         if ($request->hasFile('diplom')) {
-            $path = $request->file('diplom')->store('applicants/diploms', 'public');
-            $applicant->update(['diplom' => $path]);
+            $filename = $imageService->optimizeAndStore($request->file('diplom'), 'applicants/diploms');
+            $applicant->update(['diplom' => 'applicants/diploms/'.$filename]);
         }
 
         if ($request->hasFile('certificate')) {
-            $path = $request->file('certificate')->store('applicants/certificates', 'public');
-            $applicant->update(['certificate' => $path]);
+            $filename = $imageService->optimizeAndStore($request->file('certificate'), 'applicants/certificates');
+            $applicant->update(['certificate' => 'applicants/certificates/'.$filename]);
         }
 
         if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('applicants/photos', 'public');
-            $applicant->update(['photo' => $path]);
+            $filename = $imageService->optimizeAndStore($request->file('photo'), 'applicants/photos');
+            $applicant->update(['photo' => 'applicants/photos/'.$filename]);
         }
 
         ExamRegistration::updateOrCreate(
