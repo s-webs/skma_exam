@@ -47,10 +47,10 @@ Route::post('/register/{slug}/telegram/verify', [RegistrationTelegramController:
 Route::post('/register/{slug}/telegram/resend', [RegistrationTelegramController::class, 'resend'])->name('public.registration.telegram.resend');
 Route::post('/register/{slug}/telegram/reset', [RegistrationTelegramController::class, 'reset'])->name('public.registration.telegram.reset');
 
-// Public media (exam question/answer images; avoids /storage 403 on some hosts)
-Route::get('/media/{filename}', [PublicMediaController::class, 'show'])
+// Exam images (not /media/*.png — nginx may treat that as a static file and return 404)
+Route::get('/exam-media/{filename}', [PublicMediaController::class, 'show'])
     ->where('filename', '[a-zA-Z0-9._-]+')
-    ->name('public.media.show');
+    ->name('public.exam-media.show');
 
 // Public exam routes (token-based access)
 Route::get('/exam/{token}', [ExamAttemptController::class, 'show'])->name('public.exam.show');

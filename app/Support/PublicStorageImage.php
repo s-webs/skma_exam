@@ -3,9 +3,14 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Storage;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 class PublicStorageImage
 {
+    /** @var array<string, string|null> */
+    private static array $absolutePathCache = [];
+
     /**
      * @param  array<int, string>  $directories
      */
@@ -20,20 +25,22 @@ class PublicStorageImage
         }
 
         $normalized = ltrim(str_replace('\\', '/', $path), '/');
-        $filename = str_contains($normalized, '/')
-            ? basename($normalized)
-            : $normalized;
+
+        if (! preg_match('#^[a-zA-Z0-9._/-]+$#', $normalized)) {
+            return null;
+        }
+
+        $filename = basename($normalized);
 
         if (! preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
             return null;
         }
 
-        return route('public.media.show', ['filename' => $filename]);
+        // Always via Laravel: nginx often blocks /storage/*.png (403) or /media/*.png (404).
+        return route('public.exam-media.show', ['filename' => $filename]);
     }
 
     /**
-     * Absolute path on disk (checks storage/app/public and public/storage).
-     *
      * @param  array<int, string>  $directories
      */
     public static function absolutePathForFilename(string $filename, array $directories = ['questions', 'answers']): ?string
@@ -42,14 +49,18 @@ class PublicStorageImage
             return null;
         }
 
+        if (array_key_exists($filename, self::$absolutePathCache)) {
+            return self::$absolutePathCache[$filename];
+        }
+
         foreach (self::candidateRelativePaths($filename, $directories) as $relative) {
             $absolute = self::absolutePathForRelative($relative);
             if ($absolute !== null) {
-                return $absolute;
+                return self::$absolutePathCache[$filename] = $absolute;
             }
         }
 
-        return null;
+        return self::$absolutePathCache[$filename] = self::findByFilenameRecursive($filename);
     }
 
     /**
@@ -69,7 +80,13 @@ class PublicStorageImage
             }
         }
 
-        return null;
+        $absolute = self::findByFilenameRecursive($normalized);
+
+        if ($absolute === null) {
+            return null;
+        }
+
+        return self::relativePathFromAbsolute($absolute);
     }
 
     public static function absolutePathForRelative(string $relative): ?string
@@ -102,8 +119,77 @@ class PublicStorageImage
         }
 
         $paths[] = $filename;
+        $paths[] = "uploads/questions/{$filename}";
+        $paths[] = "uploads/answers/{$filename}";
 
         return array_values(array_unique($paths));
+    }
+
+    private static function findByFilenameRecursive(string $filename): ?string
+    {
+        foreach (self::searchRoots() as $root) {
+            if (! is_dir($root)) {
+                continue;
+            }
+
+            try {
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS)
+                );
+
+                foreach ($iterator as $file) {
+                    if ($file->isFile() && $file->getFilename() === $filename) {
+                        return $file->getPathname();
+                    }
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function searchRoots(): array
+    {
+        $roots = [
+            public_path('storage'),
+            storage_path('app/public'),
+        ];
+
+        $customRoot = env('EXAM_MEDIA_ROOT');
+        if (is_string($customRoot) && $customRoot !== '') {
+            array_unshift($roots, $customRoot);
+        }
+
+        return array_values(array_unique($roots));
+    }
+
+    private static function relativePathFromAbsolute(string $absolute): ?string
+    {
+        $absolute = str_replace('\\', '/', $absolute);
+
+        foreach (self::searchRoots() as $root) {
+            $root = rtrim(str_replace('\\', '/', $root), '/');
+            $prefix = $root.'/';
+
+            if (! str_starts_with($absolute, $prefix)) {
+                continue;
+            }
+
+            $relative = ltrim(substr($absolute, strlen($prefix)), '/');
+
+            if ($root === rtrim(str_replace('\\', '/', public_path('storage')), '/')) {
+                return $relative;
+            }
+
+            return $relative;
+        }
+
+        return null;
     }
 
     /**

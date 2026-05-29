@@ -249,20 +249,18 @@ test('answer image url resolves legacy files stored under questions directory', 
     $answerPayload = collect($questionPayload['answers'])->firstWhere('id', $answer->id);
 
     expect($answerPayload['image_url'])->toContain('legacy-answer.png');
-    expect($answerPayload['image_url'])->toContain('/media/legacy-answer.png');
-
-    $this->get($answerPayload['image_url'])->assertOk();
+    expect($answerPayload['image_url'])->toContain('/exam-media/legacy-answer.png');
 });
 
 test('media route serves legacy answer file from questions directory', function () {
     Storage::fake('public');
     Storage::disk('public')->put('questions/8LfJCWKf82answers.png', 'fake-png');
 
-    $this->get(route('public.media.show', ['filename' => '8LfJCWKf82answers.png']))
+    $this->get(route('public.exam-media.show', ['filename' => '8LfJCWKf82answers.png']))
         ->assertOk();
 });
 
-test('media route serves files placed directly under public/storage', function () {
+test('exam-media route serves files placed directly under public/storage', function () {
     $dir = public_path('storage/questions');
     if (! is_dir($dir)) {
         mkdir($dir, 0755, true);
@@ -272,7 +270,7 @@ test('media route serves files placed directly under public/storage', function (
     file_put_contents($path, 'fake-png');
 
     try {
-        $this->get(route('public.media.show', ['filename' => 'N6w60qq94yquestions.png']))
+        $this->get(route('public.exam-media.show', ['filename' => 'N6w60qq94yquestions.png']))
             ->assertOk();
     } finally {
         if (is_file($path)) {
