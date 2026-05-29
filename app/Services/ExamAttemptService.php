@@ -233,9 +233,7 @@ class ExamAttemptService
                 'id' => $question->id,
                 'order' => $attemptQuestion->question_order,
                 'content' => $question->content,
-                'image_url' => $question->image_path
-                    ? '/storage/questions/'.$question->image_path
-                    : null,
+                'image_url' => $question->imageUrl(),
                 'answers' => $this->shuffledAnswersPayload($attempt, $question),
             ];
         })->values()->all();
@@ -252,9 +250,7 @@ class ExamAttemptService
             ->map(fn (Answer $answer) => [
                 'id' => $answer->id,
                 'content' => $answer->content,
-                'image_url' => $answer->image_path
-                    ? '/storage/answers/'.$answer->image_path
-                    : null,
+                'image_url' => $answer->imageUrl(),
             ])
             ->all();
     }

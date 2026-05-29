@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\ExamRegistration;
 use App\Models\ExamType;
+use App\Support\ExamRegistrationRows;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -102,13 +103,18 @@ class ExamController extends Controller
             ->where('exam_registrations.exam_id', $exam->id)
             ->join('applicants', 'exam_registrations.applicant_id', '=', 'applicants.id')
             ->select('exam_registrations.*')
-            ->with(['applicant', 'approvedByUser:id,name'])
+            ->with([
+                'applicant',
+                'approvedByUser:id,name',
+                'examAttempts' => fn ($query) => $query->latest('id'),
+            ])
             ->orderBy('applicants.id')
             ->paginate(30);
 
         return Inertia::render('Admin/Exams/Applicants', [
             'exam' => $exam->load('examType'),
             'registrations' => $registrations,
+            'rows' => ExamRegistrationRows::flatten($registrations->items()),
         ]);
     }
 }

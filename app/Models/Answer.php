@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PublicStorageImage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -27,5 +28,10 @@ class Answer extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function imageUrl(): ?string
+    {
+        return PublicStorageImage::urlFor($this->image_path, ['answers', 'questions']);
     }
 }

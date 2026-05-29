@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\ExamAttemptService;
 use App\Services\TelegramService;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -216,4 +217,37 @@ test('finish calculates passed result', function () {
     expect($attempt->result)->not->toBeNull();
     expect($attempt->result->correct_answers)->toBe(2);
     expect($attempt->result->passed)->toBeTrue();
+});
+
+test('answer image url resolves legacy files stored under questions directory', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('questions/legacy-answer.png', 'fake-image');
+
+    $question = Question::first();
+    $answer = Answer::create([
+        'question_id' => $question->id,
+        'content' => '',
+        'image_path' => 'legacy-answer.png',
+        'is_correct' => false,
+        'created_by_user_id' => $this->admin->id,
+    ]);
+
+    $this->applicant->update(['telegram_chat_id' => '12345']);
+
+    $this->mock(TelegramService::class, function ($mock) {
+        $mock->shouldReceive('sendExamInvite')->once()->andReturn(true);
+    });
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $this->registration));
+
+    $attempt = ExamAttempt::first();
+    $service = app(ExamAttemptService::class);
+    $payload = $service->buildQuestionsPayload($attempt);
+
+    $questionPayload = collect($payload)->firstWhere('id', $question->id);
+    $answerPayload = collect($questionPayload['answers'])->firstWhere('id', $answer->id);
+
+    expect($answerPayload['image_url'])->toContain('legacy-answer.png');
+    expect($answerPayload['image_url'])->toContain('/storage/questions/');
 });

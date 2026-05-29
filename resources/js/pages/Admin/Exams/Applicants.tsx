@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, CheckCircle, XCircle, Eye, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Eye, Trash2 } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -18,24 +18,24 @@ interface Exam {
     exam_type: ExamType;
 }
 
-interface Applicant {
+interface ApplicantRow {
     id: number;
     name: string;
-    email: string;
     identifier: string;
-    phone: string;
-    language: string;
 }
 
-interface ExamRegistration {
-    id: number;
+interface ExamRegistrationRow {
+    attempt_id: number | null;
+    registration_id: number;
+    status: string | null;
     approved: boolean;
     approved_at: string | null;
     approved_by_user: {
         id: number;
         name: string;
     } | null;
-    applicant: Applicant;
+    applicant: ApplicantRow | null;
+    exam: { id: number; name: string } | null;
 }
 
 interface PaginationLink {
@@ -45,7 +45,7 @@ interface PaginationLink {
 }
 
 interface PaginatedRegistrations {
-    data: ExamRegistration[];
+    data: unknown[];
     links: PaginationLink[];
     current_page: number;
     last_page: number;
@@ -56,17 +56,18 @@ interface PaginatedRegistrations {
 interface ApplicantsProps {
     exam: Exam;
     registrations: PaginatedRegistrations;
+    rows: ExamRegistrationRow[];
 }
 
-export default function Applicants({ exam, registrations }: ApplicantsProps) {
+export default function Applicants({ exam, registrations, rows }: ApplicantsProps) {
     const { errors, flash } = usePage<{
         errors: { approve?: string };
         flash: { success?: string };
     }>().props;
 
-    const handleDelete = (applicantId: number) => {
-        if (confirm('Вы уверены, что хотите удалить этого абитуриента?')) {
-            router.delete(route('admin.applicants.destroy', applicantId));
+    const handleDeleteAttempt = (attemptId: number) => {
+        if (confirm('Вы уверены, что хотите удалить эту попытку?')) {
+            router.delete(route('admin.exam-attempts.destroy', attemptId));
         }
     };
 
@@ -80,6 +81,9 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
         }
     };
 
+    const rowKey = (row: ExamRegistrationRow) =>
+        row.attempt_id ? `attempt-${row.attempt_id}` : `reg-${row.registration_id}`;
+
     const getLanguageName = (lang: string) => {
         const languages: Record<string, string> = {
             kz: 'Казахский',
@@ -91,7 +95,7 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
 
     return (
         <AppLayout>
-            <Head title={`Абитуриенты - ${exam.name}`} />
+            <Head title={`Попытки - ${exam.name}`} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -107,7 +111,7 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
                     <div className="mb-6">
                         <h2 className="text-3xl font-bold tracking-tight">{exam.name}</h2>
                         <p className="text-muted-foreground mt-2">
-                            Записи на экзамен ({getLanguageName(exam.language)})
+                            Попытки и записи ({getLanguageName(exam.language)})
                         </p>
                     </div>
 
@@ -125,61 +129,51 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Список абитуриентов</CardTitle>
-                            <CardDescription>
-                                Всего: {registrations.total} записей
-                            </CardDescription>
+                            <CardTitle>Попытки / записи на экзамен</CardTitle>
+                            <CardDescription>Всего: {registrations.total} записей</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>ID</TableHead>
-                                        <TableHead>Имя</TableHead>
+                                        <TableHead>ФИО</TableHead>
                                         <TableHead>ИИН</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Телефон</TableHead>
-                                        <TableHead>Язык</TableHead>
                                         <TableHead>Одобрение</TableHead>
                                         <TableHead className="text-right">Действия</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {registrations.data.length === 0 ? (
+                                    {rows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={8} className="text-center text-muted-foreground">
-                                                Нет зарегистрированных абитуриентов
+                                            <TableCell colSpan={5} className="text-center text-muted-foreground">
+                                                Нет зарегистрированных записей
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        registrations.data.map((registration) => {
-                                            const applicant = registration.applicant;
+                                        rows.map((row) => {
+                                            const applicant = row.applicant;
+
+                                            if (!applicant) {
+                                                return null;
+                                            }
 
                                             return (
-                                                <TableRow key={registration.id}>
-                                                    <TableCell className="text-muted-foreground">
-                                                        {applicant.id}
+                                                <TableRow key={rowKey(row)}>
+                                                    <TableCell className="font-mono text-muted-foreground">
+                                                        {row.attempt_id ?? '—'}
                                                     </TableCell>
-                                                    <TableCell className="font-medium">
-                                                        {applicant.name}
-                                                    </TableCell>
-                                                    <TableCell className="font-mono">
-                                                        {applicant.identifier}
-                                                    </TableCell>
-                                                    <TableCell>{applicant.email}</TableCell>
-                                                    <TableCell>{applicant.phone}</TableCell>
+                                                    <TableCell className="font-medium">{applicant.name}</TableCell>
+                                                    <TableCell className="font-mono">{applicant.identifier}</TableCell>
                                                     <TableCell>
-                                                        {getLanguageName(applicant.language)}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {registration.approved ? (
+                                                        {row.approved ? (
                                                             <div className="flex flex-col gap-1">
                                                                 <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                                                                     Одобрен
                                                                 </span>
-                                                                {registration.approved_by_user && (
+                                                                {row.approved_by_user && (
                                                                     <span className="text-xs text-muted-foreground">
-                                                                        {registration.approved_by_user.name}
+                                                                        {row.approved_by_user.name}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -191,11 +185,11 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
-                                                            {!registration.approved ? (
+                                                            {!row.approved ? (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    onClick={() => handleApprove(registration.id)}
+                                                                    onClick={() => handleApprove(row.registration_id)}
                                                                     title="Одобрить"
                                                                 >
                                                                     <CheckCircle className="h-4 w-4 text-green-600" />
@@ -204,29 +198,27 @@ export default function Applicants({ exam, registrations }: ApplicantsProps) {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    onClick={() => handleUnapprove(registration.id)}
+                                                                    onClick={() => handleUnapprove(row.registration_id)}
                                                                     title="Отменить одобрение"
                                                                 >
                                                                     <XCircle className="h-4 w-4 text-orange-600" />
                                                                 </Button>
                                                             )}
                                                             <Link href={route('admin.applicants.show', applicant.id)}>
-                                                                <Button variant="ghost" size="sm">
+                                                                <Button variant="ghost" size="sm" title="Просмотр">
                                                                     <Eye className="h-4 w-4" />
                                                                 </Button>
                                                             </Link>
-                                                            <Link href={route('admin.applicants.edit', applicant.id)}>
-                                                                <Button variant="ghost" size="sm">
-                                                                    <Pencil className="h-4 w-4" />
+                                                            {row.attempt_id !== null && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteAttempt(row.attempt_id!)}
+                                                                    title="Удалить попытку"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4 text-red-600" />
                                                                 </Button>
-                                                            </Link>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleDelete(applicant.id)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4 text-red-600" />
-                                                            </Button>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>

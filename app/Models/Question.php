@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PublicStorageImage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,5 +35,10 @@ class Question extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(Answer::class);
+    }
+
+    public function imageUrl(): ?string
+    {
+        return PublicStorageImage::urlFor($this->image_path, ['questions', 'answers']);
     }
 }

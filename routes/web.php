@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ApplicantController;
+use App\Http\Controllers\Admin\ExamAttemptController as AdminExamAttemptController;
 use App\Http\Controllers\Admin\ExamController;
 use App\Http\Controllers\Admin\ExamRegistrationController;
 use App\Http\Controllers\Admin\ExamTypeController;
@@ -101,6 +102,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('applicants', ApplicantController::class);
         Route::post('exam-registrations/{examRegistration}/approve', [ExamRegistrationController::class, 'approve'])->name('exam-registrations.approve');
         Route::post('exam-registrations/{examRegistration}/unapprove', [ExamRegistrationController::class, 'unapprove'])->name('exam-registrations.unapprove');
+        Route::delete('exam-attempts/{examAttempt}', [AdminExamAttemptController::class, 'destroy'])->name('exam-attempts.destroy');
     });
 });
 

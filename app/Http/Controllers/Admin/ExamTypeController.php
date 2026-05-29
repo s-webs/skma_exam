@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ExamRegistration;
 use App\Models\ExamType;
+use App\Support\ExamRegistrationRows;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -86,6 +87,7 @@ class ExamTypeController extends Controller
                 'applicant',
                 'exam:id,name',
                 'approvedByUser:id,name',
+                'examAttempts' => fn ($query) => $query->latest('id'),
             ])
             ->latest()
             ->paginate(30);
@@ -93,6 +95,7 @@ class ExamTypeController extends Controller
         return Inertia::render('Admin/ExamTypes/Applicants', [
             'examType' => $examType,
             'registrations' => $registrations,
+            'rows' => ExamRegistrationRows::flatten($registrations->items()),
         ]);
     }
 }

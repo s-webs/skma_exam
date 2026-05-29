@@ -796,7 +796,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </ol>
 
                                             {telegramBotUrl ? (
-                                                <Button type="button" variant="outline" className="w-full" size="lg" asChild>
+                                                <Button type="button" className="w-full" size="lg" asChild>
                                                     <a href={telegramBotUrl} target="_blank" rel="noopener noreferrer">
                                                         <ExternalLink className="mr-2 h-4 w-4" />
                                                         Открыть{' '}
@@ -857,7 +857,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
                                         )}
 
-                                        <div className="flex flex-col gap-3 sm:flex-row">
+                                        <div className="flex gap-3">
                                             <Button
                                                 type="button"
                                                 onClick={goBackToPersonal}
