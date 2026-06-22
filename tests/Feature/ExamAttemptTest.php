@@ -101,7 +101,7 @@ test('finish sends exam result email for email-only exams', function () {
     $this->post(route('public.exam.start', $attempt->token));
     $this->postJson(route('public.exam.finish', $attempt->token))->assertOk();
 
-    Mail::assertSent(\App\Mail\ExamResultMail::class, function ($mail) {
+    Mail::assertQueued(\App\Mail\ExamResultMail::class, function ($mail) {
         return $mail->hasTo($this->applicant->email);
     });
 });

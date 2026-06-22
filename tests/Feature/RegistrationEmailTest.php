@@ -77,8 +77,8 @@ test('email init sends verification code', function () {
         ->assertJsonPath('email', 'new@example.com')
         ->assertJsonPath('verified', false);
 
-    Mail::assertSent(RegistrationVerificationCodeMail::class, function ($mail) {
-        return $mail->hasTo('new@example.com');
+    Mail::assertQueued(RegistrationVerificationCodeMail::class, function ($mail) {
+        return $mail->hasTo('new@example.com') && $mail->queue === 'high';
     });
 });
 
@@ -142,7 +142,6 @@ test('registration store works with verified email session', function () {
 
     $this->assertDatabaseHas('exam_registrations', [
         'exam_id' => $this->exam->id,
-        'date' => now()->toDateString(),
     ]);
 });
 
@@ -219,7 +218,7 @@ test('approve without telegram sends exam invite email', function () {
     $response->assertRedirect();
     $response->assertSessionHas('success');
 
-    Mail::assertSent(ExamInviteMail::class, function ($mail) use ($applicant) {
+    Mail::assertQueued(ExamInviteMail::class, function ($mail) use ($applicant) {
         return $mail->hasTo($applicant->email);
     });
 

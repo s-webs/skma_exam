@@ -69,14 +69,17 @@ class ExamRegistrationController extends Controller
             return back()->withErrors(['approve' => $e->getMessage()]);
         } catch (\Throwable $e) {
             return back()->withErrors([
-                'approve' => 'Не удалось отправить ссылку на email. Проверьте настройки почты.',
+                'approve' => 'Не удалось одобрить запись. Проверьте настройки очереди.',
             ]);
         }
 
         $examRegistration->loadMissing('exam');
         $channel = $examRegistration->exam->require_telegram_verification ? 'Telegram' : 'email';
+        $deliveryMessage = $examRegistration->exam->require_telegram_verification
+            ? "Ссылка отправлена в {$channel}."
+            : 'Ссылка будет отправлена на email.';
 
-        return back()->with('success', "Запись на экзамен одобрена. Ссылка отправлена в {$channel}.");
+        return back()->with('success', "Запись на экзамен одобрена. {$deliveryMessage}");
     }
 
     public function bulkApprove(Request $request)
@@ -112,7 +115,7 @@ class ExamRegistrationController extends Controller
             } catch (ExamAttemptException $e) {
                 $errors[] = "Запись #{$registration->id}: {$e->getMessage()}";
             } catch (\Throwable $e) {
-                $errors[] = "Запись #{$registration->id}: не удалось отправить приглашение.";
+                $errors[] = "Запись #{$registration->id}: не удалось поставить приглашение в очередь.";
             }
         }
 
@@ -258,7 +261,7 @@ class ExamRegistrationController extends Controller
                     );
                 }
             } else {
-                Mail::to($applicant->email)->send(new ExamInviteMail(
+                Mail::to($applicant->email)->queue(new ExamInviteMail(
                     $exam->localizedName($exam->language),
                     $examUrl,
                     $exam->duration_minutes

@@ -224,7 +224,7 @@ class RegistrationEmailService
     public function sendCode(string $email, string $code): bool
     {
         try {
-            Mail::to($email)->send(new RegistrationVerificationCodeMail($code));
+            Mail::to($email)->queue(new RegistrationVerificationCodeMail($code));
 
             return true;
         } catch (\Throwable) {

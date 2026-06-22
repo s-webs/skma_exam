@@ -126,11 +126,9 @@ class ExamAttemptController extends Controller
                         $this->examResultPdfService
                     );
                 } elseif ($applicant->email) {
-                    $previousLocale = app()->getLocale();
-                    app()->setLocale($this->normalizeExamLocale($exam->language));
-
-                    try {
-                        Mail::to($applicant->email)->send(new ExamResultMail(
+                    Mail::to($applicant->email)
+                        ->locale($this->normalizeExamLocale($exam->language))
+                        ->queue(new ExamResultMail(
                             $exam->localizedName($exam->language),
                             $result->total_score,
                             $result->passed,
@@ -138,9 +136,6 @@ class ExamAttemptController extends Controller
                             $this->examResultPdfService->render($attempt),
                             $this->examResultPdfService->filename($attempt),
                         ));
-                    } finally {
-                        app()->setLocale($previousLocale);
-                    }
                 }
             }
         } catch (ExamAttemptException $e) {

@@ -1,0 +1,13 @@
+[Unit]
+Description=Psihotest queue worker
+After=network.target mysql.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+ExecStart=/usr/bin/php /var/www/psihotest/artisan queue:work database --sleep=3 --tries=3 --queue=high,default
+WorkingDirectory=/var/www/psihotest
+
+[Install]
+WantedBy=multi-user.target
