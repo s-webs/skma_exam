@@ -1,22 +1,24 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { Users, UserCheck, UserX, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface DashboardProps {
+interface SharedAuth {
     auth: {
         user: {
             name: string;
             email: string;
             roles: Array<{ name: string }>;
         };
+        roles?: string[];
     };
 }
 
-export default function Dashboard({ auth }: DashboardProps) {
+export default function Dashboard() {
     const { t } = useTranslation();
-    const userRole = auth.user.roles[0]?.name || 'user';
+    const { auth } = usePage<SharedAuth>().props;
+    const userRole = auth.roles?.[0] ?? auth.user.roles[0]?.name ?? 'user';
 
     return (
         <AppLayout>

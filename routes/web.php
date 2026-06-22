@@ -77,11 +77,7 @@ Route::post('logout', [LoginController::class, 'logout'])
 // Admin routes (authenticated users only)
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('Admin/Dashboard', [
-            'auth' => [
-                'user' => auth()->user()->load('roles'),
-            ],
-        ]);
+        return Inertia::render('Admin/Dashboard');
     })->name('dashboard');
 
     // User management + exam type create/destroy (developer only)
