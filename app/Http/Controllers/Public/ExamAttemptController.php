@@ -129,12 +129,11 @@ class ExamAttemptController extends Controller
                     Mail::to($applicant->email)
                         ->locale($this->normalizeExamLocale($exam->language))
                         ->queue(new ExamResultMail(
+                            $attempt->id,
                             $exam->localizedName($exam->language),
                             $result->total_score,
                             $result->passed,
                             $this->examResultPdfService->publicUrl($attempt),
-                            $this->examResultPdfService->render($attempt),
-                            $this->examResultPdfService->filename($attempt),
                         ));
                 }
             }

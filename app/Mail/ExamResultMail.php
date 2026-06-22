@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\ExamAttempt;
+use App\Services\ExamResultPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -15,12 +17,11 @@ class ExamResultMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public function __construct(
+        public int $attemptId,
         public string $examName,
         public int $score,
         public bool $passed,
         public string $reportUrl,
-        public string $pdfContent,
-        public string $pdfFilename,
     ) {}
 
     public function envelope(): Envelope
@@ -42,9 +43,14 @@ class ExamResultMail extends Mailable implements ShouldQueue
      */
     public function attachments(): array
     {
+        $pdfService = app(ExamResultPdfService::class);
+        $attempt = ExamAttempt::query()->findOrFail($this->attemptId);
+
         return [
-            Attachment::fromData(fn () => $this->pdfContent, $this->pdfFilename)
-                ->withMime('application/pdf'),
+            Attachment::fromData(
+                fn () => $pdfService->render($attempt->fresh()),
+                $pdfService->filename($attempt),
+            )->withMime('application/pdf'),
         ];
     }
 }
