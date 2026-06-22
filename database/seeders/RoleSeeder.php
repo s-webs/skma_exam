@@ -71,9 +71,10 @@ class RoleSeeder extends Seeder
             'access admin panel',
         ]);
 
-        // Registrator: only view and register applicants
+        // Registrator: view applicants and approve within assigned exam types
         $registrator->givePermissionTo([
             'view applicants',
+            'approve applicants',
             'access admin panel',
         ]);
 

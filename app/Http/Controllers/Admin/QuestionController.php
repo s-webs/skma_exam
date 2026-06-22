@@ -5,28 +5,50 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\Question;
+use App\Services\ExamTypeAccessService;
 use App\Services\ImageOptimizationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class QuestionController extends Controller
 {
+    public function __construct(
+        protected ExamTypeAccessService $examTypeAccess
+    ) {}
+
+    private function ensureCanManageQuestions(): void
+    {
+        if (auth()->user()->hasRole('registrator')) {
+            abort(403, 'Регистратор может только просматривать вопросы.');
+        }
+    }
+
     public function index(Exam $exam)
     {
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+
         $questions = $exam->questions()
             ->with('answers')
             ->withCount('answers')
             ->latest()
             ->get();
 
+        $exam->loadMissing('examType');
+
         return Inertia::render('Admin/Questions/Index', [
             'exam' => $exam,
             'questions' => $questions,
+            'canManageQuestions' => ! auth()->user()->hasRole('registrator'),
+            'backUrl' => auth()->user()->hasRole('registrator')
+                ? route('admin.exam-types.show', $exam->exam_type_id)
+                : route('admin.exams.index'),
         ]);
     }
 
     public function create(Exam $exam)
     {
+        $this->ensureCanManageQuestions();
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
         return Inertia::render('Admin/Questions/Create', [
             'exam' => $exam,
         ]);
@@ -34,6 +56,9 @@ class QuestionController extends Controller
 
     public function store(Request $request, Exam $exam)
     {
+        $this->ensureCanManageQuestions();
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+
         $validated = $request->validate([
             'content' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
@@ -103,7 +128,9 @@ class QuestionController extends Controller
 
     public function edit(Question $question)
     {
+        $this->ensureCanManageQuestions();
         $question->load('answers', 'exam');
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $question->exam);
 
         return Inertia::render('Admin/Questions/Edit', [
             'question' => [
@@ -128,6 +155,10 @@ class QuestionController extends Controller
 
     public function update(Request $request, Question $question)
     {
+        $this->ensureCanManageQuestions();
+        $question->loadMissing('exam');
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $question->exam);
+
         $validated = $request->validate([
             'content' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
@@ -240,6 +271,10 @@ class QuestionController extends Controller
 
     public function destroy(Question $question)
     {
+        $this->ensureCanManageQuestions();
+        $question->loadMissing('exam');
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $question->exam);
+
         $examId = $question->exam_id;
         $question->delete();
 

@@ -38,6 +38,7 @@ export default function Create({ examTypes }: CreateProps) {
         passing_score: 19,
         max_attempts: 1,
         is_active: true,
+        require_telegram_verification: true,
     });
 
     const submit = (e: FormEvent) => {
@@ -215,6 +216,24 @@ export default function Create({ examTypes }: CreateProps) {
                                     <Label htmlFor="is_active" className="cursor-pointer">
                                         {t('exams.isActive')}
                                     </Label>
+                                </div>
+
+                                <div className="space-y-2 rounded-lg border p-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="require_telegram_verification"
+                                            checked={data.require_telegram_verification}
+                                            onCheckedChange={(checked) =>
+                                                setData('require_telegram_verification', checked as boolean)
+                                            }
+                                        />
+                                        <Label htmlFor="require_telegram_verification" className="cursor-pointer">
+                                            {t('exams.requireTelegramVerification')}
+                                        </Label>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('exams.requireTelegramVerificationHint')}
+                                    </p>
                                 </div>
 
                                 <div className="flex justify-end gap-4">

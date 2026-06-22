@@ -43,11 +43,16 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->load('roles'),
+                'roles' => $request->user()?->getRoleNames()->values()->all() ?? [],
+                'isDeveloper' => $request->user()?->hasRole('developer') ?? false,
+                'isRegistrator' => $request->user()?->hasRole('registrator') ?? false,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'bulk_approve_errors' => fn () => $request->session()->get('bulk_approve_errors', []),
             ],
+            'locale' => fn () => $request->session()->get('locale', config('app.locale')),
         ]);
     }
 }

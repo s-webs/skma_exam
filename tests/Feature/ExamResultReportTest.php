@@ -164,6 +164,10 @@ test('finish sends telegram report with pdf', function () {
             ->andReturn(true);
     });
 
+    $this->exam->update(['require_telegram_verification' => true]);
+    $this->attempt->update(['status' => 'in_progress', 'started_at' => now()]);
+    $this->attempt->result()->delete();
+
     $this->postJson(route('public.exam.finish', $this->attempt->token))
         ->assertOk();
 });

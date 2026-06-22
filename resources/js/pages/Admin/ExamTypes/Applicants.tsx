@@ -4,12 +4,19 @@ import { router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useBulkApproval } from '@/hooks/use-bulk-approval';
+import { useTranslation } from 'react-i18next';
+
+import { RegistrationLinkDialog } from '@/components/registration-link-dialog';
 
 interface ExamType {
     id: number;
     name: string;
+    slug: string;
     description: string | null;
+    exams: Exam[];
 }
 
 interface Exam {
@@ -33,6 +40,7 @@ interface ExamRegistrationRow {
         id: number;
         name: string;
     } | null;
+    is_repeat_registration: boolean;
     applicant: ApplicantRow | null;
     exam: Exam | null;
 }
@@ -58,11 +66,28 @@ interface ApplicantsProps {
     rows: ExamRegistrationRow[];
 }
 
+interface SharedAuth {
+    auth: {
+        isRegistrator: boolean;
+    };
+}
+
 export default function Applicants({ examType, registrations, rows }: ApplicantsProps) {
-    const { errors, flash } = usePage<{
+    const { t } = useTranslation();
+    const { errors, flash, auth } = usePage<{
         errors: { approve?: string };
-        flash: { success?: string };
-    }>().props;
+        flash: { success?: string; bulk_approve_errors?: string[] };
+    } & SharedAuth>().props;
+    const isRegistrator = auth.isRegistrator;
+    const {
+        selected,
+        pendingIds,
+        allPendingSelected,
+        selectedPendingCount,
+        toggle,
+        toggleAllPending,
+        bulkApprove,
+    } = useBulkApproval(rows);
 
     const handleDeleteAttempt = (attemptId: number) => {
         if (confirm('Вы уверены, что хотите удалить эту попытку?')) {
@@ -73,6 +98,9 @@ export default function Applicants({ examType, registrations, rows }: Applicants
     const handleApprove = (registrationId: number) => {
         router.post(route('admin.exam-registrations.approve', registrationId));
     };
+
+    const reviewUrl = (registrationId: number) =>
+        `${route('admin.exam-registrations.review', registrationId)}?source=exam-type`;
 
     const handleUnapprove = (registrationId: number) => {
         if (confirm('Вы уверены, что хотите отменить одобрение?')) {
@@ -89,17 +117,34 @@ export default function Applicants({ examType, registrations, rows }: Applicants
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="mb-6">
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
                         <Link href={route('admin.exam-types.index')}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 Назад к типам экзаменов
                             </Button>
                         </Link>
+                        <div className="flex flex-wrap gap-2">
+                            <Link href={route('admin.exam-types.show', examType.id)}>
+                                <Button variant="outline" size="sm">
+                                    Тип экзамена
+                                </Button>
+                            </Link>
+                            {examType.exams.length > 0 && (
+                                <RegistrationLinkDialog examType={examType} />
+                            )}
+                        </div>
                     </div>
 
                     <div className="mb-6">
-                        <h2 className="text-3xl font-bold tracking-tight">{examType.name}</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">
+                            <Link
+                                href={route('admin.exam-types.show', examType.id)}
+                                className="hover:underline"
+                            >
+                                {examType.name}
+                            </Link>
+                        </h2>
                         <p className="text-muted-foreground mt-2">Попытки и записи на экзамены этого типа</p>
                     </div>
 
@@ -115,15 +160,48 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                         </div>
                     )}
 
+                    {flash?.bulk_approve_errors && flash.bulk_approve_errors.length > 0 && (
+                        <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">
+                            <p className="font-medium">Ошибки при массовом одобрении:</p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {flash.bulk_approve_errors.map((error) => (
+                                    <li key={error}>{error}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
                     <Card>
                         <CardHeader>
-                            <CardTitle>Попытки / записи на экзамен</CardTitle>
-                            <CardDescription>Всего: {registrations.total} записей</CardDescription>
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div>
+                                    <CardTitle>Попытки / записи на экзамен</CardTitle>
+                                    <CardDescription>Всего: {registrations.total} записей</CardDescription>
+                                </div>
+                                {pendingIds.length > 0 && (
+                                    <Button
+                                        disabled={selectedPendingCount === 0}
+                                        onClick={bulkApprove}
+                                    >
+                                        <CheckCircle className="mr-2 h-4 w-4" />
+                                        Одобрить выбранные ({selectedPendingCount})
+                                    </Button>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        {pendingIds.length > 0 && (
+                                            <TableHead className="w-10">
+                                                <Checkbox
+                                                    checked={allPendingSelected}
+                                                    onCheckedChange={toggleAllPending}
+                                                    aria-label="Выбрать все неодобренные"
+                                                />
+                                            </TableHead>
+                                        )}
                                         <TableHead>ID</TableHead>
                                         <TableHead>ФИО</TableHead>
                                         <TableHead>ИИН</TableHead>
@@ -135,7 +213,7 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                                 <TableBody>
                                     {rows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                            <TableCell colSpan={pendingIds.length > 0 ? 7 : 6} className="text-center text-muted-foreground">
                                                 Нет зарегистрированных записей
                                             </TableCell>
                                         </TableRow>
@@ -149,10 +227,30 @@ export default function Applicants({ examType, registrations, rows }: Applicants
 
                                             return (
                                                 <TableRow key={rowKey(row)}>
+                                                    {pendingIds.length > 0 && (
+                                                        <TableCell>
+                                                            {!row.approved ? (
+                                                                <Checkbox
+                                                                    checked={selected.includes(row.registration_id)}
+                                                                    onCheckedChange={() => toggle(row.registration_id)}
+                                                                    aria-label={`Выбрать ${applicant.name}`}
+                                                                />
+                                                            ) : null}
+                                                        </TableCell>
+                                                    )}
                                                     <TableCell className="font-mono text-muted-foreground">
                                                         {row.attempt_id ?? '—'}
                                                     </TableCell>
-                                                    <TableCell className="font-medium">{applicant.name}</TableCell>
+                                                    <TableCell className="font-medium">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span>{applicant.name}</span>
+                                                            {row.is_repeat_registration && (
+                                                                <span className="w-fit rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                                                                    {t('applicants.repeatAttempt')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
                                                     <TableCell className="font-mono">{applicant.identifier}</TableCell>
                                                     <TableCell>{row.exam?.name ?? '—'}</TableCell>
                                                     <TableCell>
@@ -175,16 +273,30 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
-                                                            {!row.approved ? (
+                                                            {!isRegistrator && !row.approved && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleApprove(row.registration_id)}
-                                                                    title="Одобрить"
+                                                                    title="Одобрить без просмотра"
                                                                 >
                                                                     <CheckCircle className="h-4 w-4 text-green-600" />
                                                                 </Button>
+                                                            )}
+                                                            {isRegistrator && !row.approved ? (
+                                                                <Link href={reviewUrl(row.registration_id)}>
+                                                                    <Button variant="outline" size="sm">
+                                                                        Проверить
+                                                                    </Button>
+                                                                </Link>
                                                             ) : (
+                                                                <Link href={reviewUrl(row.registration_id)}>
+                                                                    <Button variant="ghost" size="sm" title="Просмотр">
+                                                                        <Eye className="h-4 w-4" />
+                                                                    </Button>
+                                                                </Link>
+                                                            )}
+                                                            {row.approved && !isRegistrator && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
@@ -194,12 +306,7 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                                                                     <XCircle className="h-4 w-4 text-orange-600" />
                                                                 </Button>
                                                             )}
-                                                            <Link href={route('admin.applicants.show', applicant.id)}>
-                                                                <Button variant="ghost" size="sm" title="Просмотр">
-                                                                    <Eye className="h-4 w-4" />
-                                                                </Button>
-                                                            </Link>
-                                                            {row.attempt_id !== null && (
+                                                            {row.attempt_id !== null && !isRegistrator && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"

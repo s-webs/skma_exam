@@ -6,18 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Applicant;
 use App\Models\Exam;
 use App\Models\ExamType;
-use App\Services\RegistrationTelegramService;
-use App\Services\TelegramService;
+use App\Services\RegistrationEmailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class RegistrationTelegramController extends Controller
+class RegistrationEmailController extends Controller
 {
     public function init(
         Request $request,
         string $slug,
-        RegistrationTelegramService $registrationTelegram
+        RegistrationEmailService $registrationEmail
     ): JsonResponse {
         $examType = ExamType::where('slug', $slug)->firstOrFail();
 
@@ -31,16 +30,16 @@ class RegistrationTelegramController extends Controller
         ]);
 
         $exam = Exam::findOrFail($preliminary['exam_id']);
-        if (! $exam->require_telegram_verification) {
-            return response()->json(['message' => __('registration.email_required')], 422);
+        if ($exam->require_telegram_verification) {
+            return response()->json(['message' => __('registration.telegram_required')], 422);
         }
 
-        $normalizedIdentifier = $registrationTelegram->normalizePersonal($preliminary)['identifier'];
+        $normalizedIdentifier = $registrationEmail->normalizePersonal($preliminary)['identifier'];
         $existingByIdentifier = Applicant::where('identifier', $normalizedIdentifier)->first();
 
         if ($existingByIdentifier) {
             return response()->json([
-                'message' => __('registration.existing_by_identifier_telegram'),
+                'message' => __('registration.existing_by_identifier_email'),
                 'can_resume' => true,
                 'existing_by' => 'identifier',
             ], 422);
@@ -71,25 +70,21 @@ class RegistrationTelegramController extends Controller
             return response()->json(['message' => __('registration.exam_unavailable')], 422);
         }
 
-        $personal = $registrationTelegram->normalizePersonal([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'identifier' => $validated['identifier'],
-            'address' => $validated['address'],
-            'phone' => $validated['phone'],
-        ]);
+        $personal = $registrationEmail->normalizePersonal($validated);
 
-        $registrationTelegram->clearSession($request);
+        $registrationEmail->clearSession($request);
 
-        $result = $registrationTelegram->createDraft($slug, (string) $validated['exam_id'], $personal);
-        $request->session()->put(RegistrationTelegramService::SESSION_TOKEN_KEY, $result['token']);
-        $request->session()->forget(RegistrationTelegramService::SESSION_VERIFIED_KEY);
+        $result = $registrationEmail->createDraft($slug, (string) $validated['exam_id'], $personal);
+        $request->session()->put(RegistrationEmailService::SESSION_TOKEN_KEY, $result['token']);
+        $request->session()->forget(RegistrationEmailService::SESSION_VERIFIED_KEY);
+
+        if (! $result['code_sent']) {
+            return response()->json(['message' => __('registration.code_send_failed')], 500);
+        }
 
         return response()->json([
             'token' => $result['token'],
-            'bot_username' => config('services.telegram.bot_username'),
-            'bot_url' => app(TelegramService::class)->buildBotUrl(),
-            'linked' => false,
+            'email' => $personal['email'],
             'verified' => false,
         ]);
     }
@@ -97,8 +92,7 @@ class RegistrationTelegramController extends Controller
     public function resume(
         Request $request,
         string $slug,
-        RegistrationTelegramService $registrationTelegram,
-        TelegramService $telegram
+        RegistrationEmailService $registrationEmail
     ): JsonResponse {
         $examType = ExamType::where('slug', $slug)->firstOrFail();
 
@@ -111,12 +105,17 @@ class RegistrationTelegramController extends Controller
             'phone' => 'required|string',
         ]);
 
+        $exam = Exam::findOrFail($validated['exam_id']);
+        if ($exam->require_telegram_verification) {
+            return response()->json(['message' => __('registration.telegram_required')], 422);
+        }
+
         $examBelongsToType = $examType->exams()->where('id', $validated['exam_id'])->exists();
         if (! $examBelongsToType) {
             return response()->json(['message' => __('registration.exam_unavailable')], 422);
         }
 
-        $personal = $registrationTelegram->normalizePersonal($validated);
+        $personal = $registrationEmail->normalizePersonal($validated);
 
         $applicant = Applicant::where('identifier', $personal['identifier'])->first();
 
@@ -145,23 +144,25 @@ class RegistrationTelegramController extends Controller
             'phone' => $personal['phone'],
         ]);
 
-        $registrationTelegram->clearSession($request);
+        $registrationEmail->clearSession($request);
 
-        $result = $registrationTelegram->createDraftFromApplicant(
+        $result = $registrationEmail->createDraftFromApplicant(
             $slug,
             (string) $validated['exam_id'],
             $applicant,
             $personal
         );
 
-        $request->session()->put(RegistrationTelegramService::SESSION_TOKEN_KEY, $result['token']);
-        $request->session()->forget(RegistrationTelegramService::SESSION_VERIFIED_KEY);
+        $request->session()->put(RegistrationEmailService::SESSION_TOKEN_KEY, $result['token']);
+        $request->session()->forget(RegistrationEmailService::SESSION_VERIFIED_KEY);
+
+        if (! $result['code_sent']) {
+            return response()->json(['message' => __('registration.code_send_failed')], 500);
+        }
 
         return response()->json([
             'token' => $result['token'],
-            'bot_username' => config('services.telegram.bot_username'),
-            'bot_url' => $telegram->buildBotUrl(),
-            'linked' => $result['linked'],
+            'email' => $personal['email'],
             'verified' => false,
             'resumed_from_existing' => true,
             'applicant' => [
@@ -177,41 +178,18 @@ class RegistrationTelegramController extends Controller
         ]);
     }
 
-    public function reset(Request $request, string $slug, RegistrationTelegramService $registrationTelegram): JsonResponse
+    public function reset(Request $request, string $slug, RegistrationEmailService $registrationEmail): JsonResponse
     {
         ExamType::where('slug', $slug)->firstOrFail();
-        $registrationTelegram->clearSession($request);
+        $registrationEmail->clearSession($request);
 
         return response()->json(['ok' => true]);
-    }
-
-    public function status(
-        Request $request,
-        string $slug,
-        RegistrationTelegramService $registrationTelegram
-    ): JsonResponse {
-        ExamType::where('slug', $slug)->firstOrFail();
-
-        $token = $request->session()->get(RegistrationTelegramService::SESSION_TOKEN_KEY);
-        if (! $token) {
-            return response()->json(['linked' => false, 'verified' => false], 404);
-        }
-
-        $draft = $registrationTelegram->getDraft($token);
-        if (! $draft || ($draft['slug'] ?? '') !== $slug) {
-            return response()->json(['linked' => false, 'verified' => false], 404);
-        }
-
-        return response()->json([
-            'linked' => ! empty($draft['chat_id']),
-            'verified' => ($draft['verified'] ?? false) === true,
-        ]);
     }
 
     public function verify(
         Request $request,
         string $slug,
-        RegistrationTelegramService $registrationTelegram
+        RegistrationEmailService $registrationEmail
     ): JsonResponse {
         ExamType::where('slug', $slug)->firstOrFail();
 
@@ -219,25 +197,21 @@ class RegistrationTelegramController extends Controller
             'code' => 'required|string|size:6',
         ]);
 
-        $token = $request->session()->get(RegistrationTelegramService::SESSION_TOKEN_KEY);
+        $token = $request->session()->get(RegistrationEmailService::SESSION_TOKEN_KEY);
         if (! $token) {
             return response()->json(['message' => __('registration.session_expired_personal')], 422);
         }
 
-        $draft = $registrationTelegram->getDraft($token);
+        $draft = $registrationEmail->getDraft($token);
         if (! $draft || ($draft['slug'] ?? '') !== $slug) {
             return response()->json(['message' => __('registration.session_expired')], 422);
         }
 
-        if (empty($draft['chat_id'])) {
-            return response()->json(['message' => __('registration.telegram_start_first')], 422);
+        if (! $registrationEmail->verifyCode($token, $validated['code'])) {
+            return response()->json(['message' => __('registration.invalid_code_email')], 422);
         }
 
-        if (! $registrationTelegram->verifyCode($token, $validated['code'])) {
-            return response()->json(['message' => __('registration.invalid_code_telegram')], 422);
-        }
-
-        $registrationTelegram->markSessionVerified($request, $token);
+        $registrationEmail->markSessionVerified($request, $token);
 
         return response()->json(['verified' => true]);
     }
@@ -245,29 +219,24 @@ class RegistrationTelegramController extends Controller
     public function resend(
         Request $request,
         string $slug,
-        RegistrationTelegramService $registrationTelegram,
-        TelegramService $telegram
+        RegistrationEmailService $registrationEmail
     ): JsonResponse {
         ExamType::where('slug', $slug)->firstOrFail();
 
-        $token = $request->session()->get(RegistrationTelegramService::SESSION_TOKEN_KEY);
+        $token = $request->session()->get(RegistrationEmailService::SESSION_TOKEN_KEY);
         if (! $token) {
             return response()->json(['message' => __('registration.session_expired')], 422);
         }
 
-        $draft = $registrationTelegram->getDraft($token);
+        $draft = $registrationEmail->getDraft($token);
         if (! $draft || ($draft['slug'] ?? '') !== $slug) {
             return response()->json(['message' => __('registration.session_expired')], 422);
         }
 
-        if (empty($draft['chat_id'])) {
-            return response()->json(['message' => __('registration.telegram_link_first')], 422);
-        }
-
-        if (! $registrationTelegram->resendCode($token, $telegram)) {
+        if (! $registrationEmail->resendCode($token)) {
             return response()->json(['message' => __('registration.resend_failed')], 500);
         }
 
-        return response()->json(['message' => __('registration.code_resent_telegram')]);
+        return response()->json(['message' => __('registration.code_resent_email')]);
     }
 }

@@ -11,7 +11,9 @@ use App\Models\User;
 use App\Services\ExamAttemptService;
 use App\Services\TelegramService;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     $this->seed(RoleSeeder::class);
@@ -25,6 +27,8 @@ beforeEach(function () {
         'description' => null,
         'is_active' => true,
     ]);
+
+    $this->examType->roles()->attach(Role::where('name', 'ktbo')->first()->id);
 
     $this->exam = Exam::create([
         'exam_type_id' => $this->examType->id,
@@ -80,7 +84,26 @@ beforeEach(function () {
         'applicant_id' => $this->applicant->id,
         'exam_id' => $this->exam->id,
         'approved' => false,
-    ]);
+        ]);
+});
+
+test('finish sends exam result email for email-only exams', function () {
+    Mail::fake();
+
+    $this->exam->update(['require_telegram_verification' => false]);
+    $this->applicant->update(['telegram_chat_id' => null]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $this->registration));
+
+    $attempt = ExamAttempt::first();
+
+    $this->post(route('public.exam.start', $attempt->token));
+    $this->postJson(route('public.exam.finish', $attempt->token))->assertOk();
+
+    Mail::assertSent(\App\Mail\ExamResultMail::class, function ($mail) {
+        return $mail->hasTo($this->applicant->email);
+    });
 });
 
 test('approve is blocked without telegram chat id', function () {

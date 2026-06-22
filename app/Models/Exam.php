@@ -18,11 +18,13 @@ class Exam extends Model
         'passing_score',
         'max_attempts',
         'is_active',
+        'require_telegram_verification',
         'created_by_user_id',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'require_telegram_verification' => 'boolean',
         'duration_minutes' => 'integer',
         'questions_count' => 'integer',
         'passing_score' => 'integer',

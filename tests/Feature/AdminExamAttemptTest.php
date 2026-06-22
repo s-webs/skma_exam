@@ -7,6 +7,7 @@ use App\Models\ExamRegistration;
 use App\Models\ExamType;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     $this->seed(RoleSeeder::class);
@@ -20,6 +21,8 @@ beforeEach(function () {
         'description' => null,
         'is_active' => true,
     ]);
+
+    $examType->roles()->attach(Role::where('name', 'ktbo')->first()->id);
 
     $this->exam = Exam::create([
         'exam_type_id' => $examType->id,

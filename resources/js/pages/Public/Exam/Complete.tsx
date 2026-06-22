@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 interface CompleteProps {
     reportUrl: string;
+    resultsDeliveryMethod: 'telegram' | 'email';
     exam: { name: string };
     result: {
         passed: boolean;
@@ -22,7 +23,7 @@ function formatTime(seconds: number): string {
     return `${m} мин ${s} сек`;
 }
 
-export default function Complete({ reportUrl, exam, result }: CompleteProps) {
+export default function Complete({ reportUrl, resultsDeliveryMethod, exam, result }: CompleteProps) {
     return (
         <>
             <Head title={`Результат — ${exam.name}`} />
@@ -71,7 +72,9 @@ export default function Complete({ reportUrl, exam, result }: CompleteProps) {
                             </p>
 
                             <p className="text-center text-sm text-muted-foreground">
-                                Подробный PDF-отчёт также отправлен в Telegram.
+                                {resultsDeliveryMethod === 'telegram'
+                                    ? 'Подробный PDF-отчёт также отправлен в Telegram.'
+                                    : 'Подробный PDF-отчёт также отправлен на email.'}
                             </p>
 
                             <Button asChild className="h-12 w-full" size="lg">

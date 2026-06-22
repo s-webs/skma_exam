@@ -30,8 +30,12 @@ class ExamAttemptService
         $applicant = $registration->applicant;
         $exam = $registration->exam;
 
-        if (empty($applicant->telegram_chat_id)) {
-            throw ExamAttemptException::noTelegram();
+        if ($exam->require_telegram_verification) {
+            if (empty($applicant->telegram_chat_id)) {
+                throw ExamAttemptException::noTelegram();
+            }
+        } elseif (empty($applicant->email)) {
+            throw new ExamAttemptException('У абитуриента не указан email. Одобрение невозможно.');
         }
 
         if (! $exam->is_active) {

@@ -38,10 +38,13 @@ interface Exam {
 interface QuestionsIndexProps {
     exam: Exam;
     questions: Question[];
+    canManageQuestions?: boolean;
+    backUrl?: string;
 }
 
-export default function Index({ exam, questions }: QuestionsIndexProps) {
+export default function Index({ exam, questions, canManageQuestions = true, backUrl }: QuestionsIndexProps) {
     const { t } = useTranslation();
+    const listBackUrl = backUrl ?? route('admin.exams.index');
 
     const handleDelete = (id: number) => {
         if (confirm(t('questions.deleteConfirm'))) {
@@ -56,7 +59,7 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="mb-6">
-                        <Link href={route('admin.exams.index')}>
+                        <Link href={listBackUrl}>
                             <Button variant="ghost" size="sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 {t('questions.backToExams')}
@@ -71,12 +74,14 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                                 {exam.name}
                             </p>
                         </div>
-                        <Link href={route('admin.exams.questions.create', exam.id)}>
-                            <Button>
-                                <Plus className="mr-2 h-4 w-4" />
-                                {t('questions.addQuestion')}
-                            </Button>
-                        </Link>
+                        {canManageQuestions && (
+                            <Link href={route('admin.exams.questions.create', exam.id)}>
+                                <Button>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    {t('questions.addQuestion')}
+                                </Button>
+                            </Link>
+                        )}
                     </div>
 
                     <Card>
@@ -95,13 +100,15 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                                         <TableHead>{t('questions.answers')}</TableHead>
                                         <TableHead>{t('questions.correctAnswers')}</TableHead>
                                         <TableHead>{t('questions.status')}</TableHead>
-                                        <TableHead className="text-right">{t('questions.actions')}</TableHead>
+                                        {canManageQuestions && (
+                                            <TableHead className="text-right">{t('questions.actions')}</TableHead>
+                                        )}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {questions.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center">
+                                            <TableCell colSpan={canManageQuestions ? 6 : 5} className="text-center">
                                                 {t('questions.noQuestions')}
                                             </TableCell>
                                         </TableRow>
@@ -136,22 +143,24 @@ export default function Index({ exam, questions }: QuestionsIndexProps) {
                                                             {question.is_active ? t('questions.active') : t('questions.inactive')}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <Link href={route('admin.questions.edit', question.id)}>
-                                                                <Button variant="outline" size="sm">
-                                                                    <Pencil className="h-4 w-4" />
+                                                    {canManageQuestions && (
+                                                        <TableCell className="text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <Link href={route('admin.questions.edit', question.id)}>
+                                                                    <Button variant="outline" size="sm">
+                                                                        <Pencil className="h-4 w-4" />
+                                                                    </Button>
+                                                                </Link>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleDelete(question.id)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4 text-red-600" />
                                                                 </Button>
-                                                            </Link>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleDelete(question.id)}
-                                                            >
-                                                                <Trash2 className="h-4 w-4 text-red-600" />
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
+                                                            </div>
+                                                        </TableCell>
+                                                    )}
                                                 </TableRow>
                                             );
                                         })

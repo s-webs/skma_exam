@@ -33,8 +33,11 @@ import {
     Copy,
     Check,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/language-switcher';
+import i18n from '@/i18n/config';
 
-type RegistrationStep = 'exam' | 'personal' | 'telegram' | 'education' | 'documents';
+type RegistrationStep = 'exam' | 'personal' | 'telegram' | 'email' | 'education' | 'documents';
 
 function getCsrfToken(): string {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -70,7 +73,7 @@ async function registrationJson<T>(
 
         return {
             ok: false,
-            message: firstFieldError ?? body.message ?? 'Произошла ошибка. Попробуйте снова.',
+            message: firstFieldError ?? body.message ?? i18n.t('publicRegistration.genericError'),
             errors,
             can_resume: body.can_resume === true,
         };
@@ -83,6 +86,7 @@ interface Exam {
     id: number;
     name: string;
     language: string;
+    require_telegram_verification: boolean;
 }
 
 interface ExamType {
@@ -99,6 +103,7 @@ interface RegistrationIndexProps {
 }
 
 export default function Index({ examType, telegramBotUsername }: RegistrationIndexProps) {
+    const { t } = useTranslation();
     const [selectedExam, setSelectedExam] = useState<number | null>(null);
     const [currentStep, setCurrentStep] = useState<RegistrationStep>('exam');
     const [telegramBotUrl, setTelegramBotUrl] = useState<string | null>(null);
@@ -107,8 +112,10 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const [telegramLinked, setTelegramLinked] = useState(false);
     const [telegramVerified, setTelegramVerified] = useState(false);
     const [verificationCode, setVerificationCode] = useState('');
-    const [telegramError, setTelegramError] = useState<string | null>(null);
-    const [telegramLoading, setTelegramLoading] = useState(false);
+    const [verificationError, setVerificationError] = useState<string | null>(null);
+    const [verificationLoading, setVerificationLoading] = useState(false);
+    const [emailSentTo, setEmailSentTo] = useState<string | null>(null);
+    const [resendLoading, setResendLoading] = useState(false);
     const [resumeLoading, setResumeLoading] = useState(false);
     const [existingAccountModalOpen, setExistingAccountModalOpen] = useState(false);
     const [existingAccountMessage, setExistingAccountMessage] = useState<string | null>(null);
@@ -162,10 +169,19 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const handleExamSelect = (examId: string) => {
         setSelectedExam(Number(examId));
         setData('exam_id', examId);
+        void resetVerificationState();
     };
 
+    const selectedExamConfig = useMemo(
+        () => examType.exams.find((exam) => exam.id.toString() === data.exam_id) ?? null,
+        [examType.exams, data.exam_id],
+    );
+
+    const requiresTelegram = selectedExamConfig?.require_telegram_verification ?? true;
+    const verificationStep: 'telegram' | 'email' = requiresTelegram ? 'telegram' : 'email';
+
     const canProceedToPersonal = data.exam_id !== '';
-    const canProceedToTelegram = data.name && data.email && data.identifier && data.phone && data.address;
+    const canProceedToVerification = data.name && data.email && data.identifier && data.phone && data.address;
     const canProceedToEducation = telegramVerified;
     const canProceedToDocuments = data.graduate_organization && data.graduate_year && data.speciality;
 
@@ -175,34 +191,50 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         });
     }, [examType.slug]);
 
-    const resetTelegramState = useCallback(async () => {
-        await resetTelegramSessionOnServer();
+    const resetEmailSessionOnServer = useCallback(async () => {
+        await registrationJson(route('public.registration.email.reset', examType.slug), {
+            method: 'POST',
+        });
+    }, [examType.slug]);
+
+    const resetVerificationSessionOnServer = useCallback(async () => {
+        await Promise.all([resetTelegramSessionOnServer(), resetEmailSessionOnServer()]);
+    }, [resetTelegramSessionOnServer, resetEmailSessionOnServer]);
+
+    const resetVerificationState = useCallback(async () => {
+        await resetVerificationSessionOnServer();
         setTelegramBotUrl(null);
         setVerificationToken(null);
         setTokenCopied(false);
         setTelegramLinked(false);
         setTelegramVerified(false);
         setVerificationCode('');
-        setTelegramError(null);
+        setVerificationError(null);
+        setEmailSentTo(null);
         setLoadedFromExistingApplicant(false);
-    }, [resetTelegramSessionOnServer]);
+    }, [resetVerificationSessionOnServer]);
 
     const invalidateVerificationAfterPersonalChange = useCallback(async () => {
-        if (!telegramVerified && !verificationToken) {
+        if (!telegramVerified && !verificationToken && !emailSentTo) {
             return;
         }
 
-        await resetTelegramSessionOnServer();
+        await resetVerificationSessionOnServer();
         setTelegramVerified(false);
         setTelegramLinked(false);
         setVerificationCode('');
         setVerificationToken(null);
-        setTelegramError('Личные данные изменены — нажмите «Продолжить» и снова пройдите Telegram.');
-    }, [telegramVerified, verificationToken, resetTelegramSessionOnServer]);
+        setEmailSentTo(null);
+        setVerificationError(
+            requiresTelegram
+                ? t('publicRegistration.personalChangedTelegram')
+                : t('publicRegistration.personalChangedEmail'),
+        );
+    }, [telegramVerified, verificationToken, emailSentTo, resetVerificationSessionOnServer, requiresTelegram, t]);
 
     const handlePersonalFieldChange = (field: 'name' | 'email' | 'identifier' | 'address' | 'phone', value: string) => {
         setData(field, value);
-        if ((!telegramVerified && !verificationToken) || personalEditInvalidatedRef.current) {
+        if ((!telegramVerified && !verificationToken && !emailSentTo) || personalEditInvalidatedRef.current) {
             return;
         }
         personalEditInvalidatedRef.current = true;
@@ -210,7 +242,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     };
 
     const goBackToPersonal = () => {
-        void resetTelegramState().then(() => setCurrentStep('personal'));
+        void resetVerificationState().then(() => setCurrentStep('personal'));
     };
 
     const copyVerificationToken = async () => {
@@ -223,7 +255,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
             setTokenCopied(true);
             setTimeout(() => setTokenCopied(false), 2000);
         } catch {
-            setTelegramError('Не удалось скопировать токен. Выделите и скопируйте вручную.');
+            setVerificationError(t('publicRegistration.copyTokenFailed'));
         }
     };
 
@@ -255,10 +287,14 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
     useEffect(() => {
         if (formErrors.telegram) {
-            setTelegramError(formErrors.telegram);
+            setVerificationError(formErrors.telegram);
             setCurrentStep('telegram');
         }
-    }, [formErrors.telegram]);
+        if (formErrors.email) {
+            setVerificationError(formErrors.email);
+            setCurrentStep('email');
+        }
+    }, [formErrors.telegram, formErrors.email]);
 
     const applyTelegramInitResult = (initData: {
         token?: string;
@@ -307,14 +343,56 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setCurrentStep('telegram');
     };
 
+    const applyEmailInitResult = (initData: {
+        email: string;
+        verified: boolean;
+        resumed_from_existing?: boolean;
+        applicant?: {
+            name: string;
+            email: string;
+            identifier: string;
+            address: string;
+            phone: string;
+            graduate_organization: string;
+            graduate_year: string;
+            speciality: string;
+        };
+    }) => {
+        setEmailSentTo(initData.email);
+        setTelegramVerified(initData.verified);
+        setVerificationCode('');
+        setExistingAccountModalOpen(false);
+        setInitFieldErrors({});
+        setLoadedFromExistingApplicant(initData.resumed_from_existing === true);
+        personalEditInvalidatedRef.current = false;
+
+        if (initData.applicant) {
+            const applicant = initData.applicant;
+            setData((current) => ({
+                ...current,
+                name: current.name || applicant.name || '',
+                email: current.email || applicant.email || '',
+                identifier: current.identifier || applicant.identifier || '',
+                address: current.address || applicant.address || '',
+                phone: current.phone || applicant.phone || '',
+                graduate_organization:
+                    current.graduate_organization || applicant.graduate_organization || '',
+                graduate_year: current.graduate_year || applicant.graduate_year || '',
+                speciality: current.speciality || applicant.speciality || '',
+            }));
+        }
+
+        setCurrentStep('email');
+    };
+
     const isExistingAccountByIdentifier = (
         fieldErrors?: Record<string, string[]>,
         canResume?: boolean,
     ) => canResume === true || Boolean(fieldErrors?.identifier?.length);
 
     const initTelegramVerification = async () => {
-        setTelegramLoading(true);
-        setTelegramError(null);
+        setVerificationLoading(true);
+        setVerificationError(null);
         setExistingAccountModalOpen(false);
         setInitFieldErrors({});
 
@@ -335,15 +413,15 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
             }),
         });
 
-        setTelegramLoading(false);
+        setVerificationLoading(false);
 
         if (!result.ok) {
             if (isExistingAccountByIdentifier(result.errors, result.can_resume)) {
                 setExistingAccountMessage(result.message);
                 setExistingAccountModalOpen(true);
-                setTelegramError(null);
+                setVerificationError(null);
             } else {
-                setTelegramError(result.message);
+                setVerificationError(result.message);
                 if (result.errors) {
                     setInitFieldErrors(result.errors);
                 }
@@ -354,9 +432,57 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         applyTelegramInitResult(result.data);
     };
 
+    const initEmailVerification = async () => {
+        setVerificationLoading(true);
+        setVerificationError(null);
+        setExistingAccountModalOpen(false);
+        setInitFieldErrors({});
+
+        const result = await registrationJson<{
+            email: string;
+            verified: boolean;
+        }>(route('public.registration.email.init', examType.slug), {
+            method: 'POST',
+            body: JSON.stringify({
+                exam_id: data.exam_id,
+                name: data.name,
+                email: data.email,
+                identifier: data.identifier,
+                address: data.address,
+                phone: data.phone,
+            }),
+        });
+
+        setVerificationLoading(false);
+
+        if (!result.ok) {
+            if (isExistingAccountByIdentifier(result.errors, result.can_resume)) {
+                setExistingAccountMessage(result.message);
+                setExistingAccountModalOpen(true);
+                setVerificationError(null);
+            } else {
+                setVerificationError(result.message);
+                if (result.errors) {
+                    setInitFieldErrors(result.errors);
+                }
+            }
+            return;
+        }
+
+        applyEmailInitResult(result.data);
+    };
+
+    const initVerification = () => {
+        if (requiresTelegram) {
+            void initTelegramVerification();
+        } else {
+            void initEmailVerification();
+        }
+    };
+
     const resumeExistingAccountVerification = async () => {
         setResumeLoading(true);
-        setTelegramError(null);
+        setVerificationError(null);
 
         const result = await registrationJson<{
             token: string;
@@ -374,30 +500,44 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                 graduate_year: string;
                 speciality: string;
             };
-        }>(route('public.registration.telegram.resume', examType.slug), {
-            method: 'POST',
-            body: JSON.stringify({
-                exam_id: data.exam_id,
-                name: data.name,
-                email: data.email,
-                identifier: data.identifier,
-                address: data.address,
-                phone: data.phone,
-            }),
-        });
+        }>(
+            requiresTelegram
+                ? route('public.registration.telegram.resume', examType.slug)
+                : route('public.registration.email.resume', examType.slug),
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    exam_id: data.exam_id,
+                    name: data.name,
+                    email: data.email,
+                    identifier: data.identifier,
+                    address: data.address,
+                    phone: data.phone,
+                }),
+            },
+        );
 
         setResumeLoading(false);
 
         if (!result.ok) {
             setExistingAccountModalOpen(false);
-            setTelegramError(result.message);
+            setVerificationError(result.message);
             if (result.errors) {
                 setInitFieldErrors(result.errors);
             }
             return;
         }
 
-        applyTelegramInitResult(result.data);
+        if (requiresTelegram) {
+            applyTelegramInitResult(result.data);
+        } else {
+            applyEmailInitResult({
+                email: result.data.applicant?.email ?? data.email,
+                verified: result.data.verified,
+                resumed_from_existing: result.data.resumed_from_existing,
+                applicant: result.data.applicant,
+            });
+        }
     };
 
     const handleResumeFromModal = () => {
@@ -406,7 +546,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
     const verifyTelegramCode = async () => {
         setVerifyLoading(true);
-        setTelegramError(null);
+        setVerificationError(null);
 
         const result = await registrationJson<{ verified: boolean }>(
             route('public.registration.telegram.verify', examType.slug),
@@ -419,11 +559,52 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         setVerifyLoading(false);
 
         if (!result.ok) {
-            setTelegramError(result.message);
+            setVerificationError(result.message);
             return;
         }
 
         setTelegramVerified(true);
+    };
+
+    const verifyEmailCode = async () => {
+        setVerifyLoading(true);
+        setVerificationError(null);
+
+        const result = await registrationJson<{ verified: boolean }>(
+            route('public.registration.email.verify', examType.slug),
+            {
+                method: 'POST',
+                body: JSON.stringify({ code: verificationCode }),
+            },
+        );
+
+        setVerifyLoading(false);
+
+        if (!result.ok) {
+            setVerificationError(result.message);
+            return;
+        }
+
+        setTelegramVerified(true);
+    };
+
+    const resendEmailCode = async () => {
+        setResendLoading(true);
+        setVerificationError(null);
+
+        const result = await registrationJson<{ message: string }>(
+            route('public.registration.email.resend', examType.slug),
+            { method: 'POST' },
+        );
+
+        setResendLoading(false);
+
+        if (!result.ok) {
+            setVerificationError(result.message);
+            return;
+        }
+
+        setVerificationError(null);
     };
 
     const submit = (e: FormEvent) => {
@@ -440,16 +621,19 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         post(route('public.registration.store', examType.slug));
     };
 
-    const allSteps = useMemo(
-        () => [
-            { id: 'exam' as const, label: 'Экзамен', icon: GraduationCap },
-            { id: 'personal' as const, label: 'Личные данные', icon: User },
-            { id: 'telegram' as const, label: 'Telegram', icon: MessageCircle },
-            { id: 'education' as const, label: 'Образование', icon: BookOpen },
-            { id: 'documents' as const, label: 'Документы', icon: Upload },
-        ],
-        [],
-    );
+    const allSteps = useMemo(() => {
+        const verification = requiresTelegram
+            ? { id: 'telegram' as const, label: 'Telegram', icon: MessageCircle }
+            : { id: 'email' as const, label: 'Email', icon: Mail };
+
+        return [
+            { id: 'exam' as const, label: t('publicRegistration.steps.exam'), icon: GraduationCap },
+            { id: 'personal' as const, label: t('publicRegistration.steps.personal'), icon: User },
+            verification,
+            { id: 'education' as const, label: t('publicRegistration.steps.education'), icon: BookOpen },
+            { id: 'documents' as const, label: t('publicRegistration.steps.documents'), icon: Upload },
+        ];
+    }, [requiresTelegram, t]);
 
     const steps = useMemo(
         () =>
@@ -470,24 +654,27 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
     return (
         <>
-            <Head title={`Регистрация - ${examType.name}`} />
+            <Head title={`${t('publicRegistration.pageTitle')} - ${examType.name}`} />
 
             <div className="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
                 {/* Header */}
                 <div className="bg-white/10 backdrop-blur-md border-b border-white/20">
                     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                                <GraduationCap className="h-6 w-6 text-white" />
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                                    <GraduationCap className="h-6 w-6 text-white" />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl sm:text-2xl font-bold text-white">
+                                        {examType.name}
+                                    </h1>
+                                    {examType.description && (
+                                        <p className="text-sm text-white/80">{examType.description}</p>
+                                    )}
+                                </div>
                             </div>
-                            <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-white">
-                                    {examType.name}
-                                </h1>
-                                {examType.description && (
-                                    <p className="text-sm text-white/80">{examType.description}</p>
-                                )}
-                            </div>
+                            <LanguageSwitcher />
                         </div>
                     </div>
                 </div>
@@ -544,10 +731,10 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                                Выберите экзамен
+                                                {t('publicRegistration.exam.title')}
                                             </h2>
                                             <p className="text-gray-600">
-                                                Выберите язык, на котором вы хотите сдавать экзамен
+                                                {t('publicRegistration.exam.description')}
                                             </p>
                                         </div>
 
@@ -582,7 +769,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             className="w-full"
                                             size="lg"
                                         >
-                                            Продолжить
+                                            {t('publicRegistration.actions.continue')}
                                         </Button>
                                     </div>
                                 )}
@@ -592,17 +779,20 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                                Личные данные
+                                                {t('publicRegistration.personal.title')}
                                             </h2>
                                             <p className="text-gray-600">
-                                                Заполните ваши контактные данные
+                                                {t('publicRegistration.personal.description')}
                                             </p>
                                         </div>
 
                                         {loadedFromExistingApplicant && (
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                                                Данные подставлены из вашей существующей заявки. Проверьте их
-                                                и при необходимости измените перед подтверждением в Telegram.
+                                                {t('publicRegistration.personal.existingHint', {
+                                                    channel: requiresTelegram
+                                                        ? t('publicRegistration.personal.viaTelegram')
+                                                        : t('publicRegistration.personal.viaEmail'),
+                                                })}
                                             </div>
                                         )}
 
@@ -610,13 +800,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             <div className="space-y-2">
                                                 <Label htmlFor="name" className="flex items-center gap-2">
                                                     <User className="h-4 w-4 text-gray-500" />
-                                                    ФИО *
+                                                    {t('publicRegistration.personal.fullName')} *
                                                 </Label>
                                                 <Input
                                                     id="name"
                                                     value={data.name}
                                                     onChange={(e) => handlePersonalFieldChange('name', e.target.value)}
-                                                    placeholder="Иванов Иван Иванович"
+                                                    placeholder={t('publicRegistration.personal.fullNamePlaceholder')}
                                                     required
                                                     className="h-12"
                                                 />
@@ -629,7 +819,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 <div className="space-y-2">
                                                     <Label htmlFor="identifier" className="flex items-center gap-2">
                                                         <User className="h-4 w-4 text-gray-500" />
-                                                        ИИН *
+                                                        {t('publicRegistration.personal.iin')} *
                                                     </Label>
                                                     <Input
                                                         id="identifier"
@@ -650,7 +840,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 <div className="space-y-2">
                                                     <Label htmlFor="phone" className="flex items-center gap-2">
                                                         <Phone className="h-4 w-4 text-gray-500" />
-                                                        Телефон *
+                                                        {t('publicRegistration.personal.phone')} *
                                                     </Label>
                                                     <Input
                                                         id="phone"
@@ -690,13 +880,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             <div className="space-y-2">
                                                 <Label htmlFor="address" className="flex items-center gap-2">
                                                     <MapPin className="h-4 w-4 text-gray-500" />
-                                                    Адрес *
+                                                    {t('publicRegistration.personal.address')} *
                                                 </Label>
                                                 <Textarea
                                                     id="address"
                                                     value={data.address}
                                                     onChange={(e) => handlePersonalFieldChange('address', e.target.value)}
-                                                    placeholder="Город, улица, дом, квартира"
+                                                    placeholder={t('publicRegistration.personal.addressPlaceholder')}
                                                     required
                                                     rows={3}
                                                 />
@@ -714,27 +904,27 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                Назад
+                                            {t('publicRegistration.actions.back')}
                                             </Button>
                                             <Button
                                                 type="button"
-                                                onClick={initTelegramVerification}
-                                                disabled={!canProceedToTelegram || telegramLoading}
+                                                onClick={initVerification}
+                                                disabled={!canProceedToVerification || verificationLoading}
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                {telegramLoading ? (
+                                                {verificationLoading ? (
                                                     <>
                                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        Проверка...
+                                                        {t('publicRegistration.actions.checking')}
                                                     </>
                                                 ) : (
-                                                    'Продолжить'
+                                                    t('publicRegistration.actions.continue')
                                                 )}
                                             </Button>
                                         </div>
-                                        {telegramError && (
-                                            <p className="text-sm text-red-600">{telegramError}</p>
+                                        {verificationError && (
+                                            <p className="text-sm text-red-600">{verificationError}</p>
                                         )}
                                     </div>
                                 )}
@@ -743,24 +933,23 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                                Подтверждение через Telegram
+                                                {t('publicRegistration.telegram.title')}
                                             </h2>
                                             <p className="text-gray-600">
-                                                Привяжите Telegram и введите код из бота. Без этого шага продолжить регистрацию нельзя.
+                                                {t('publicRegistration.telegram.description')}
                                             </p>
                                         </div>
 
                                         {loadedFromExistingApplicant && (
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                                                Вы продолжаете регистрацию существующей заявки. Личные данные должны
-                                                совпадать с теми, что вы подтвердите в Telegram.
+                                                {t('publicRegistration.telegram.resumeHint')}
                                             </div>
                                         )}
 
                                         <div className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5">
                                             {verificationToken && (
                                                 <div className="space-y-2">
-                                                    <Label className="text-gray-800">Токен верификации</Label>
+                                                    <Label className="text-gray-800">{t('publicRegistration.telegram.tokenLabel')}</Label>
                                                     <div className="flex gap-2">
                                                         <Input
                                                             readOnly
@@ -773,7 +962,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                             size="icon"
                                                             className="h-12 w-12 shrink-0"
                                                             onClick={copyVerificationToken}
-                                                            title="Скопировать токен"
+                                                            title={t('publicRegistration.telegram.copyToken')}
                                                         >
                                                             {tokenCopied ? (
                                                                 <Check className="h-4 w-4 text-green-600" />
@@ -783,31 +972,31 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                         </Button>
                                                     </div>
                                                     <p className="text-xs text-gray-600">
-                                                        Скопируйте токен — он понадобится в боте
+                                                        {t('publicRegistration.telegram.copyTokenHint')}
                                                     </p>
                                                 </div>
                                             )}
 
                                             <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                                                <li>Откройте бота в Telegram</li>
-                                                <li>Нажмите «Получить код верификации»</li>
-                                                <li>Отправьте боту скопированный токен</li>
-                                                <li>Введите полученный код ниже на сайте</li>
+                                                <li>{t('publicRegistration.telegram.step1')}</li>
+                                                <li>{t('publicRegistration.telegram.step2')}</li>
+                                                <li>{t('publicRegistration.telegram.step3')}</li>
+                                                <li>{t('publicRegistration.telegram.step4')}</li>
                                             </ol>
 
                                             {telegramBotUrl ? (
                                                 <Button type="button" className="w-full" size="lg" asChild>
                                                     <a href={telegramBotUrl} target="_blank" rel="noopener noreferrer">
                                                         <ExternalLink className="mr-2 h-4 w-4" />
-                                                        Открыть{' '}
+                                                        {t('publicRegistration.telegram.openBot')}{' '}
                                                         {telegramBotUsername
                                                             ? `@${telegramBotUsername.replace(/^@/, '')}`
-                                                            : 'Telegram-бота'}
+                                                            : t('publicRegistration.telegram.telegramBot')}
                                                     </a>
                                                 </Button>
                                             ) : (
                                                 <p className="text-sm text-amber-700">
-                                                    Бот не настроен (TELEGRAM_BOT_USERNAME). Обратитесь к администратору.
+                                                    {t('publicRegistration.telegram.botNotConfigured')}
                                                 </p>
                                             )}
 
@@ -822,13 +1011,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
                                                 )}
                                                 {telegramLinked
-                                                    ? 'Токен принят — проверьте код в Telegram'
-                                                    : 'Ожидаем отправку токена в боте...'}
+                                                    ? t('publicRegistration.telegram.tokenAccepted')
+                                                    : t('publicRegistration.telegram.waitingToken')}
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <Label htmlFor="verification_code">Код из Telegram *</Label>
+                                            <Label htmlFor="verification_code">{t('publicRegistration.telegram.codeLabel')} *</Label>
                                             <Input
                                                 id="verification_code"
                                                 value={verificationCode}
@@ -843,8 +1032,8 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             />
                                         </div>
 
-                                        {telegramError && (
-                                            <p className="text-sm text-red-600">{telegramError}</p>
+                                        {verificationError && (
+                                            <p className="text-sm text-red-600">{verificationError}</p>
                                         )}
 
                                         {formErrors.telegram && (
@@ -853,7 +1042,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
                                         {telegramVerified && (
                                             <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-                                                Telegram подтверждён. Можно перейти к следующему шагу.
+                                                {t('publicRegistration.telegram.verified')}
                                             </div>
                                         )}
 
@@ -865,7 +1054,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                Назад
+                                            {t('publicRegistration.actions.back')}
                                             </Button>
                                             {!telegramVerified && (
                                                 <Button
@@ -882,10 +1071,10 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     {verifyLoading ? (
                                                         <>
                                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                            Проверка...
+                                                            {t('publicRegistration.actions.checking')}
                                                         </>
                                                     ) : (
-                                                        'Подтвердить код'
+                                                        t('publicRegistration.actions.confirmCode')
                                                     )}
                                                 </Button>
                                             )}
@@ -896,7 +1085,120 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="flex-1"
                                                     size="lg"
                                                 >
-                                                    Продолжить
+                                                    {t('publicRegistration.actions.continue')}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {currentStep === 'email' && (
+                                    <div className="space-y-6">
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                                {t('publicRegistration.emailVerify.title')}
+                                            </h2>
+                                            <p className="text-gray-600">
+                                                {t('publicRegistration.emailVerify.description')}
+                                            </p>
+                                        </div>
+
+                                        {loadedFromExistingApplicant && (
+                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                                                {t('publicRegistration.emailVerify.resumeHint')}
+                                            </div>
+                                        )}
+
+                                        <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-5 space-y-3">
+                                            <p className="text-sm text-gray-700">
+                                                {t('publicRegistration.emailVerify.codeSentTo')}{' '}
+                                                <strong>{emailSentTo ?? data.email}</strong>
+                                            </p>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={resendEmailCode}
+                                                disabled={resendLoading}
+                                            >
+                                                {resendLoading ? (
+                                                    <>
+                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        {t('publicRegistration.actions.sending')}
+                                                    </>
+                                                ) : (
+                                                    t('publicRegistration.emailVerify.resendCode')
+                                                )}
+                                            </Button>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email_verification_code">{t('publicRegistration.emailVerify.codeLabel')} *</Label>
+                                            <Input
+                                                id="email_verification_code"
+                                                value={verificationCode}
+                                                onChange={(e) =>
+                                                    setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                                                }
+                                                placeholder="000000"
+                                                maxLength={6}
+                                                inputMode="numeric"
+                                                className="h-12 text-center text-lg tracking-widest font-mono"
+                                                disabled={telegramVerified}
+                                            />
+                                        </div>
+
+                                        {verificationError && (
+                                            <p className="text-sm text-red-600">{verificationError}</p>
+                                        )}
+
+                                        {formErrors.email && (
+                                            <p className="text-sm text-red-600">{formErrors.email}</p>
+                                        )}
+
+                                        {telegramVerified && (
+                                            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                                                {t('publicRegistration.emailVerify.verified')}
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-3">
+                                            <Button
+                                                type="button"
+                                                onClick={goBackToPersonal}
+                                                variant="outline"
+                                                className="flex-1"
+                                                size="lg"
+                                            >
+                                            {t('publicRegistration.actions.back')}
+                                            </Button>
+                                            {!telegramVerified && (
+                                                <Button
+                                                    type="button"
+                                                    onClick={verifyEmailCode}
+                                                    disabled={
+                                                        verificationCode.length !== 6 || verifyLoading
+                                                    }
+                                                    className="flex-1"
+                                                    size="lg"
+                                                >
+                                                    {verifyLoading ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            {t('publicRegistration.actions.checking')}
+                                                        </>
+                                                    ) : (
+                                                        t('publicRegistration.actions.confirmCode')
+                                                    )}
+                                                </Button>
+                                            )}
+                                            {telegramVerified && (
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => setCurrentStep('education')}
+                                                    className="flex-1"
+                                                    size="lg"
+                                                >
+                                                    {t('publicRegistration.actions.continue')}
                                                 </Button>
                                             )}
                                         </div>
@@ -908,18 +1210,16 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                                Образование
+                                                {t('publicRegistration.education.title')}
                                             </h2>
                                             <p className="text-gray-600">
-                                                Информация о вашем образовании
+                                                {t('publicRegistration.education.description')}
                                             </p>
                                         </div>
 
                                         {loadedFromExistingApplicant && (
                                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                                                Документы из вашей предыдущей заявки сохранятся. Повторно
-                                                загружать их не нужно — после проверки данных нажмите
-                                                «Зарегистрироваться».
+                                                {t('publicRegistration.education.existingDocsHint')}
                                             </div>
                                         )}
 
@@ -927,13 +1227,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             <div className="space-y-2">
                                                 <Label htmlFor="graduate_organization" className="flex items-center gap-2">
                                                     <Building2 className="h-4 w-4 text-gray-500" />
-                                                    Учебное заведение *
+                                                    {t('publicRegistration.education.organization')} *
                                                 </Label>
                                                 <Input
                                                     id="graduate_organization"
                                                     value={data.graduate_organization}
                                                     onChange={(e) => setData('graduate_organization', e.target.value)}
-                                                    placeholder="Название университета/колледжа"
+                                                    placeholder={t('publicRegistration.education.organizationPlaceholder')}
                                                     required
                                                     className="h-12"
                                                 />
@@ -946,7 +1246,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 <div className="space-y-2">
                                                     <Label htmlFor="graduate_year" className="flex items-center gap-2">
                                                         <Calendar className="h-4 w-4 text-gray-500" />
-                                                        Год окончания *
+                                                        {t('publicRegistration.education.graduateYear')} *
                                                     </Label>
                                                     <Input
                                                         id="graduate_year"
@@ -964,13 +1264,13 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 <div className="space-y-2">
                                                     <Label htmlFor="speciality" className="flex items-center gap-2">
                                                         <GraduationCap className="h-4 w-4 text-gray-500" />
-                                                        Специальность *
+                                                        {t('publicRegistration.education.speciality')} *
                                                     </Label>
                                                     <Input
                                                         id="speciality"
                                                         value={data.speciality}
                                                         onChange={(e) => setData('speciality', e.target.value)}
-                                                        placeholder="Ваша специальность"
+                                                        placeholder={t('publicRegistration.education.specialityPlaceholder')}
                                                         required
                                                         className="h-12"
                                                     />
@@ -984,12 +1284,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                         <div className="flex gap-3">
                                             <Button
                                                 type="button"
-                                                onClick={() => setCurrentStep('telegram')}
+                                                onClick={() => setCurrentStep(verificationStep)}
                                                 variant="outline"
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                Назад
+                                            {t('publicRegistration.actions.back')}
                                             </Button>
                                             {loadedFromExistingApplicant ? (
                                                 <Button
@@ -1002,7 +1302,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="flex-1"
                                                     size="lg"
                                                 >
-                                                    {processing ? 'Отправка...' : 'Зарегистрироваться'}
+                                                    {processing ? t('publicRegistration.actions.sending') : t('publicRegistration.actions.submit')}
                                                 </Button>
                                             ) : (
                                                 <Button
@@ -1012,7 +1312,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="flex-1"
                                                     size="lg"
                                                 >
-                                                    Продолжить
+                                                    {t('publicRegistration.actions.continue')}
                                                 </Button>
                                             )}
                                         </div>
@@ -1024,11 +1324,10 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                     <div className="space-y-6">
                                         <div>
                                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                                Документы
+                                                {t('publicRegistration.documents.title')}
                                             </h2>
                                             <p className="text-gray-600">
-                                                Загрузите фото документов (необязательно). Снимки с телефона
-                                                автоматически сжимаются перед отправкой.
+                                                {t('publicRegistration.documents.description')}
                                             </p>
                                         </div>
 
@@ -1038,7 +1337,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div className="space-y-2">
-                                                <Label htmlFor="document_front">Документ (лицевая)</Label>
+                                                <Label htmlFor="document_front">{t('publicRegistration.documents.documentFront')}</Label>
                                                 <Input
                                                     id="document_front"
                                                     type="file"
@@ -1053,7 +1352,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="h-12"
                                                 />
                                                 {compressingField === 'document_front' && (
-                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                    <p className="text-xs text-gray-500">{t('publicRegistration.documents.compressing')}</p>
                                                 )}
                                                 {errors.document_front && (
                                                     <p className="text-sm text-red-600">{errors.document_front}</p>
@@ -1061,7 +1360,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="document_back">Документ (обратная)</Label>
+                                                <Label htmlFor="document_back">{t('publicRegistration.documents.documentBack')}</Label>
                                                 <Input
                                                     id="document_back"
                                                     type="file"
@@ -1076,7 +1375,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="h-12"
                                                 />
                                                 {compressingField === 'document_back' && (
-                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                    <p className="text-xs text-gray-500">{t('publicRegistration.documents.compressing')}</p>
                                                 )}
                                                 {errors.document_back && (
                                                     <p className="text-sm text-red-600">{errors.document_back}</p>
@@ -1084,7 +1383,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="diplom">Диплом</Label>
+                                                <Label htmlFor="diplom">{t('publicRegistration.documents.diplom')}</Label>
                                                 <Input
                                                     id="diplom"
                                                     type="file"
@@ -1096,7 +1395,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="h-12"
                                                 />
                                                 {compressingField === 'diplom' && (
-                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                    <p className="text-xs text-gray-500">{t('publicRegistration.documents.compressing')}</p>
                                                 )}
                                                 {errors.diplom && (
                                                     <p className="text-sm text-red-600">{errors.diplom}</p>
@@ -1104,7 +1403,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="certificate">Сертификат</Label>
+                                                <Label htmlFor="certificate">{t('publicRegistration.documents.certificate')}</Label>
                                                 <Input
                                                     id="certificate"
                                                     type="file"
@@ -1119,7 +1418,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="h-12"
                                                 />
                                                 {compressingField === 'certificate' && (
-                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                    <p className="text-xs text-gray-500">{t('publicRegistration.documents.compressing')}</p>
                                                 )}
                                                 {errors.certificate && (
                                                     <p className="text-sm text-red-600">{errors.certificate}</p>
@@ -1127,7 +1426,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="photo">Фото</Label>
+                                                <Label htmlFor="photo">{t('publicRegistration.documents.photo')}</Label>
                                                 <Input
                                                     id="photo"
                                                     type="file"
@@ -1139,7 +1438,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     className="h-12"
                                                 />
                                                 {compressingField === 'photo' && (
-                                                    <p className="text-xs text-gray-500">Сжатие изображения…</p>
+                                                    <p className="text-xs text-gray-500">{t('publicRegistration.documents.compressing')}</p>
                                                 )}
                                                 {errors.photo && (
                                                     <p className="text-sm text-red-600">{errors.photo}</p>
@@ -1149,8 +1448,11 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
                                         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                                             <p className="text-sm text-blue-800">
-                                                <strong>Обратите внимание:</strong> После отправки заявки ваши данные будут проверены.
-                                                После одобрения ссылка на экзамен придёт в Telegram.
+                                                {t('publicRegistration.documents.notice', {
+                                                    channel: requiresTelegram
+                                                        ? t('publicRegistration.documents.viaTelegram')
+                                                        : t('publicRegistration.documents.viaEmail'),
+                                                })}
                                             </p>
                                         </div>
 
@@ -1162,7 +1464,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                Назад
+                                            {t('publicRegistration.actions.back')}
                                             </Button>
                                             <Button
                                                 type="submit"
@@ -1170,7 +1472,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 className="flex-1"
                                                 size="lg"
                                             >
-                                                {processing ? 'Отправка...' : 'Зарегистрироваться'}
+                                                {processing ? t('publicRegistration.actions.sending') : t('publicRegistration.actions.submit')}
                                             </Button>
                                         </div>
                                     </div>
@@ -1184,10 +1486,14 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
             <Dialog open={existingAccountModalOpen} onOpenChange={setExistingAccountModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>У вас уже есть аккаунт</DialogTitle>
+                        <DialogTitle>{t('publicRegistration.existingAccount.title')}</DialogTitle>
                         <DialogDescription>
                             {existingAccountMessage ||
-                                'Заявка с таким ИИН уже зарегистрирована. Перейдите к подтверждению через Telegram, чтобы продолжить регистрацию.'}
+                                t('publicRegistration.existingAccount.message', {
+                                    channel: requiresTelegram
+                                        ? t('publicRegistration.existingAccount.channelTelegram')
+                                        : t('publicRegistration.existingAccount.channelEmail'),
+                                })}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="gap-2 sm:gap-0">
@@ -1197,7 +1503,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                             onClick={() => setExistingAccountModalOpen(false)}
                             disabled={resumeLoading}
                         >
-                            Отмена
+                            {t('publicRegistration.actions.cancel')}
                         </Button>
                         <Button
                             type="button"
@@ -1207,10 +1513,10 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                             {resumeLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Загрузка...
+                                    {t('publicRegistration.actions.loading')}
                                 </>
                             ) : (
-                                'Перейти к подтверждению'
+                                t('publicRegistration.actions.goToVerification')
                             )}
                         </Button>
                     </DialogFooter>

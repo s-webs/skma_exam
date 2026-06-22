@@ -33,6 +33,7 @@ interface Exam {
     passing_score: number;
     max_attempts: number | null;
     is_active: boolean;
+    require_telegram_verification: boolean;
 }
 
 interface EditProps {
@@ -52,6 +53,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
         passing_score: exam.passing_score,
         max_attempts: exam.max_attempts,
         is_active: exam.is_active,
+        require_telegram_verification: exam.require_telegram_verification ?? true,
     });
 
     const submit = (e: FormEvent) => {
@@ -227,6 +229,24 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                     <Label htmlFor="is_active" className="cursor-pointer">
                                         {t('exams.isActive')}
                                     </Label>
+                                </div>
+
+                                <div className="space-y-2 rounded-lg border p-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="require_telegram_verification"
+                                            checked={data.require_telegram_verification}
+                                            onCheckedChange={(checked) =>
+                                                setData('require_telegram_verification', checked as boolean)
+                                            }
+                                        />
+                                        <Label htmlFor="require_telegram_verification" className="cursor-pointer">
+                                            {t('exams.requireTelegramVerification')}
+                                        </Label>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('exams.requireTelegramVerificationHint')}
+                                    </p>
                                 </div>
 
                                 <div className="flex justify-end gap-4">

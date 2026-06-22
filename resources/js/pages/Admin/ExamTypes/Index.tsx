@@ -1,5 +1,5 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Pencil, Trash2, Users } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Plus, Pencil, Trash2, Users, Eye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -36,8 +36,19 @@ interface ExamTypesIndexProps {
     examTypes: ExamType[];
 }
 
+interface SharedAuth {
+    auth: {
+        isDeveloper: boolean;
+        isRegistrator: boolean;
+    };
+}
+
 export default function Index({ examTypes }: ExamTypesIndexProps) {
     const { t } = useTranslation();
+    const { auth } = usePage<SharedAuth>().props;
+    const isDeveloper = auth.isDeveloper;
+    const isRegistrator = auth.isRegistrator;
+    const canManageTypes = !isRegistrator;
 
     const handleDelete = (id: number, examsCount: number) => {
         const message = examsCount > 0
@@ -62,12 +73,14 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                 {t('examTypes.description')}
                             </p>
                         </div>
-                        <Link href={route('admin.exam-types.create')}>
-                            <Button>
-                                <Plus className="mr-2 h-4 w-4" />
-                                {t('examTypes.addType')}
-                            </Button>
-                        </Link>
+                        {isDeveloper && (
+                            <Link href={route('admin.exam-types.create')}>
+                                <Button>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    {t('examTypes.addType')}
+                                </Button>
+                            </Link>
+                        )}
                     </div>
 
                     <Card>
@@ -100,7 +113,14 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                     ) : (
                                         examTypes.map((examType) => (
                                             <TableRow key={examType.id}>
-                                                <TableCell className="font-medium">{examType.name}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    <Link
+                                                        href={route('admin.exam-types.show', examType.id)}
+                                                        className="hover:underline"
+                                                    >
+                                                        {examType.name}
+                                                    </Link>
+                                                </TableCell>
                                                 <TableCell className="max-w-md truncate">
                                                     {examType.description || '—'}
                                                 </TableCell>
@@ -139,18 +159,29 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        <Link href={route('admin.exam-types.edit', examType.id)}>
+                                                        <Link href={route('admin.exam-types.show', examType.id)}>
                                                             <Button variant="outline" size="sm">
-                                                                <Pencil className="h-4 w-4" />
+                                                                <Eye className="h-4 w-4" />
                                                             </Button>
                                                         </Link>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(examType.id, examType.exams_count)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4 text-red-600" />
-                                                        </Button>
+                                                        {canManageTypes && (
+                                                            <>
+                                                                <Link href={route('admin.exam-types.edit', examType.id)}>
+                                                                    <Button variant="outline" size="sm">
+                                                                        <Pencil className="h-4 w-4" />
+                                                                    </Button>
+                                                                </Link>
+                                                                {isDeveloper && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleDelete(examType.id, examType.exams_count)}
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4 text-red-600" />
+                                                                    </Button>
+                                                                )}
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

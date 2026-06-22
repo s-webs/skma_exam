@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Public\ExamAttemptController;
 use App\Http\Controllers\Public\ExamResultReportController;
 use App\Http\Controllers\Public\RegistrationController;
+use App\Http\Controllers\Public\RegistrationEmailController;
 use App\Http\Controllers\Public\RegistrationTelegramController;
 use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Http\Request;
@@ -45,6 +46,11 @@ Route::get('/register/{slug}/telegram/status', [RegistrationTelegramController::
 Route::post('/register/{slug}/telegram/verify', [RegistrationTelegramController::class, 'verify'])->name('public.registration.telegram.verify');
 Route::post('/register/{slug}/telegram/resend', [RegistrationTelegramController::class, 'resend'])->name('public.registration.telegram.resend');
 Route::post('/register/{slug}/telegram/reset', [RegistrationTelegramController::class, 'reset'])->name('public.registration.telegram.reset');
+Route::post('/register/{slug}/email/init', [RegistrationEmailController::class, 'init'])->name('public.registration.email.init');
+Route::post('/register/{slug}/email/resume', [RegistrationEmailController::class, 'resume'])->name('public.registration.email.resume');
+Route::post('/register/{slug}/email/verify', [RegistrationEmailController::class, 'verify'])->name('public.registration.email.verify');
+Route::post('/register/{slug}/email/resend', [RegistrationEmailController::class, 'resend'])->name('public.registration.email.resend');
+Route::post('/register/{slug}/email/reset', [RegistrationEmailController::class, 'reset'])->name('public.registration.email.reset');
 
 // Public exam routes (token-based access)
 Route::get('/exam/{token}', [ExamAttemptController::class, 'show'])->name('public.exam.show');
@@ -78,31 +84,43 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         ]);
     })->name('dashboard');
 
-    // User management (only for developer role)
+    // User management + exam type create/destroy (developer only)
     Route::middleware(['role:developer'])->group(function () {
         Route::resource('users', UserController::class);
+        Route::get('exam-types/create', [ExamTypeController::class, 'create'])->name('exam-types.create');
+        Route::post('exam-types', [ExamTypeController::class, 'store'])->name('exam-types.store');
+        Route::delete('exam-types/{examType}', [ExamTypeController::class, 'destroy'])->name('exam-types.destroy');
     });
 
-    // Exam management (developer and ktbo)
-    Route::middleware(['role_or_permission:developer|ktbo'])->group(function () {
-        Route::resource('exam-types', ExamTypeController::class);
+    // Shared exam-type read + registrator scoped access
+    Route::middleware(['role_or_permission:developer|ktbo|registrator'])->group(function () {
+        Route::get('exam-types', [ExamTypeController::class, 'index'])->name('exam-types.index');
+        Route::get('exam-types/{examType}', [ExamTypeController::class, 'show'])->name('exam-types.show');
         Route::get('exam-types/{examType}/applicants', [ExamTypeController::class, 'applicants'])->name('exam-types.applicants');
+        Route::get('exams/{exam}/questions', [QuestionController::class, 'index'])->name('exams.questions.index');
+        Route::get('exam-registrations/{examRegistration}/review', [ExamRegistrationController::class, 'review'])->name('exam-registrations.review');
+        Route::post('exam-registrations/{examRegistration}/approve', [ExamRegistrationController::class, 'approve'])->name('exam-registrations.approve');
+        Route::post('exam-registrations/bulk-approve', [ExamRegistrationController::class, 'bulkApprove'])->name('exam-registrations.bulk-approve');
+    });
+
+    // Exam type edit + exam/question management (developer and ktbo)
+    Route::middleware(['role_or_permission:developer|ktbo'])->group(function () {
+        Route::get('exam-types/{examType}/edit', [ExamTypeController::class, 'edit'])->name('exam-types.edit');
+        Route::match(['put', 'patch'], 'exam-types/{examType}', [ExamTypeController::class, 'update'])->name('exam-types.update');
         Route::resource('exams', ExamController::class);
         Route::get('exams/{exam}/applicants', [ExamController::class, 'applicants'])->name('exams.applicants');
-        Route::get('exams/{exam}/questions', [QuestionController::class, 'index'])->name('exams.questions.index');
         Route::get('exams/{exam}/questions/create', [QuestionController::class, 'create'])->name('exams.questions.create');
         Route::post('exams/{exam}/questions', [QuestionController::class, 'store'])->name('exams.questions.store');
         Route::get('questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
         Route::put('questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
         Route::delete('questions/{question}', [QuestionController::class, 'destroy'])->name('questions.destroy');
-    });
-
-    // Applicant management (developer, ktbo, and registrator)
-    Route::middleware(['role_or_permission:developer|ktbo|registrator'])->group(function () {
-        Route::resource('applicants', ApplicantController::class);
-        Route::post('exam-registrations/{examRegistration}/approve', [ExamRegistrationController::class, 'approve'])->name('exam-registrations.approve');
         Route::post('exam-registrations/{examRegistration}/unapprove', [ExamRegistrationController::class, 'unapprove'])->name('exam-registrations.unapprove');
         Route::delete('exam-attempts/{examAttempt}', [AdminExamAttemptController::class, 'destroy'])->name('exam-attempts.destroy');
+    });
+
+    // Applicant management (developer and ktbo only)
+    Route::middleware(['role_or_permission:developer|ktbo'])->group(function () {
+        Route::resource('applicants', ApplicantController::class);
     });
 });
 

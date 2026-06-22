@@ -100,7 +100,15 @@
     "create": "Create Exam Type",
     "creating": "Creating...",
     "saveChanges": "Save Changes",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "accessTitle": "Exam type access",
+    "accessHint": "Access is granted if the user is listed explicitly or has one of the selected roles.",
+    "accessUsers": "Users",
+    "accessRoles": "Roles",
+    "noAssignableUsers": "No users with KTBO or registrator roles",
+    "examsInType": "Exams in this type",
+    "examsInTypeDesc": "List of exams and links to questions",
+    "viewQuestions": "Questions"
   },
   "exams": {
     "title": "Exams",
@@ -144,6 +152,8 @@
     "maxAttempts": "Maximum Attempts",
     "maxAttemptsPlaceholder": "Unlimited",
     "isActive": "Active",
+    "requireTelegramVerification": "Telegram verification",
+    "requireTelegramVerificationHint": "If disabled — email is verified with a code during registration, and the exam link is sent by email.",
     "cancel": "Cancel",
     "create": "Create Exam",
     "creating": "Creating...",
@@ -170,6 +180,7 @@
     "notVerified": "Not Verified",
     "approved": "Approved",
     "notApproved": "Not Approved",
+    "repeatAttempt": "Repeat attempt",
     "approve": "Approve",
     "unapprove": "Cancel Approval",
     "deleteConfirm": "Are you sure you want to delete this applicant?",
@@ -282,5 +293,120 @@
     "creating": "Creating...",
     "saveChanges": "Save Changes",
     "saving": "Saving..."
+  },
+  "publicRegistration": {
+    "pageTitle": "Registration",
+    "genericError": "An error occurred. Please try again.",
+    "personalChangedTelegram": "Personal details changed — click Continue and verify via Telegram again.",
+    "personalChangedEmail": "Personal details changed — click Continue and verify your email again.",
+    "copyTokenFailed": "Could not copy the token. Please select and copy it manually.",
+    "steps": {
+      "exam": "Exam",
+      "personal": "Personal details",
+      "education": "Education",
+      "documents": "Documents"
+    },
+    "exam": {
+      "title": "Choose an exam",
+      "description": "Select the language in which you want to take the exam"
+    },
+    "personal": {
+      "title": "Personal details",
+      "description": "Fill in your contact information",
+      "existingHint": "Details were loaded from your existing application. Review and update them if needed before verifying via {{channel}}.",
+      "viaTelegram": "Telegram",
+      "viaEmail": "email",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "John Doe",
+      "iin": "IIN",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "addressPlaceholder": "City, street, building, apartment"
+    },
+    "telegram": {
+      "title": "Telegram verification",
+      "description": "Link Telegram and enter the code from the bot. You cannot continue without this step.",
+      "resumeHint": "You are continuing an existing application. Personal details must match what you verify in Telegram.",
+      "tokenLabel": "Verification token",
+      "copyToken": "Copy token",
+      "copyTokenHint": "Copy the token — you will need it in the bot",
+      "step1": "Open the bot in Telegram",
+      "step2": "Tap Get verification code",
+      "step3": "Send the copied token to the bot",
+      "step4": "Enter the received code below on the website",
+      "openBot": "Open",
+      "telegramBot": "Telegram bot",
+      "botNotConfigured": "Bot is not configured (TELEGRAM_BOT_USERNAME). Contact the administrator.",
+      "tokenAccepted": "Token accepted — check the code in Telegram",
+      "waitingToken": "Waiting for the token to be sent in the bot...",
+      "codeLabel": "Code from Telegram",
+      "verified": "Telegram verified. You can proceed to the next step."
+    },
+    "emailVerify": {
+      "title": "Email verification",
+      "description": "We sent a 6-digit code to the address you provided. Enter it below.",
+      "resumeHint": "You are continuing an existing application. Email must match the one from the previous step.",
+      "codeSentTo": "Code sent to:",
+      "resendCode": "Resend code",
+      "codeLabel": "Code from email",
+      "verified": "Email verified. You can proceed to the next step."
+    },
+    "education": {
+      "title": "Education",
+      "description": "Information about your education",
+      "existingDocsHint": "Documents from your previous application will be kept. You do not need to upload them again — review your details and click Register.",
+      "organization": "Educational institution",
+      "organizationPlaceholder": "University/college name",
+      "graduateYear": "Graduation year",
+      "speciality": "Speciality",
+      "specialityPlaceholder": "Your speciality"
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Upload photos of documents (optional). Phone photos are automatically compressed before upload.",
+      "documentFront": "ID document (front)",
+      "documentBack": "ID document (back)",
+      "diplom": "Diploma",
+      "certificate": "Certificate",
+      "photo": "Photo",
+      "compressing": "Compressing image…",
+      "notice": "Please note: After submitting, your data will be reviewed. After approval, the exam link will be sent {{channel}}.",
+      "viaTelegram": "via Telegram",
+      "viaEmail": "by email"
+    },
+    "existingAccount": {
+      "title": "You already have an account",
+      "message": "An application with this IIN is already registered. Continue verification via {{channel}} to proceed.",
+      "channelTelegram": "Telegram",
+      "channelEmail": "email"
+    },
+    "actions": {
+      "continue": "Continue",
+      "back": "Back",
+      "checking": "Checking...",
+      "confirmCode": "Confirm code",
+      "sending": "Submitting...",
+      "submit": "Register",
+      "cancel": "Cancel",
+      "goToVerification": "Go to verification",
+      "loading": "Loading..."
+    },
+    "success": {
+      "pageTitle": "Registration complete",
+      "title": "Registration completed successfully!",
+      "thanks": "Thank you for registering, {{name}}",
+      "whatNext": "What happens next?",
+      "step1": "Your application has been submitted for review",
+      "step2": "A registrar will verify your details and documents",
+      "step3": "After approval, you will receive the exam link {{channel}}",
+      "step4": "Time allowed for the exam is set in the admin panel",
+      "viaTelegram": "via Telegram",
+      "viaEmail": "by email",
+      "notice": "Please note: Application review may take some time.",
+      "watchTelegram": " Watch for messages from the Telegram bot.",
+      "watchEmail": " Watch for emails at {{email}}.",
+      "backHome": "Back to home"
+    }
   }
 }

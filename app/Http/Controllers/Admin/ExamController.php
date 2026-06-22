@@ -6,16 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\ExamRegistration;
 use App\Models\ExamType;
+use App\Services\ExamTypeAccessService;
 use App\Support\ExamRegistrationRows;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ExamController extends Controller
 {
+    public function __construct(
+        protected ExamTypeAccessService $examTypeAccess
+    ) {}
+
     public function index()
     {
+        $accessibleTypeIds = $this->examTypeAccess->accessibleExamTypeIds(auth()->user());
+
         $exams = Exam::with(['examType', 'createdBy'])
             ->withCount('questions')
+            ->when(
+                ! $this->examTypeAccess->isDeveloper(auth()->user()),
+                fn ($query) => $query->whereIn('exam_type_id', $accessibleTypeIds)
+            )
             ->latest()
             ->get();
 
@@ -26,7 +37,9 @@ class ExamController extends Controller
 
     public function create()
     {
-        $examTypes = ExamType::where('is_active', true)->get();
+        $examTypes = $this->examTypeAccess
+            ->scopeAccessible(ExamType::where('is_active', true), auth()->user())
+            ->get();
 
         return Inertia::render('Admin/Exams/Create', [
             'examTypes' => $examTypes,
@@ -45,7 +58,10 @@ class ExamController extends Controller
             'passing_score' => 'required|integer|min:1',
             'max_attempts' => 'nullable|integer|min:1',
             'is_active' => 'boolean',
+            'require_telegram_verification' => 'boolean',
         ]);
+
+        $this->examTypeAccess->ensureCanAccess(auth()->user(), (int) $validated['exam_type_id']);
 
         $validated['created_by_user_id'] = auth()->id();
 
@@ -57,7 +73,11 @@ class ExamController extends Controller
 
     public function edit(Exam $exam)
     {
-        $examTypes = ExamType::where('is_active', true)->get();
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+
+        $examTypes = $this->examTypeAccess
+            ->scopeAccessible(ExamType::where('is_active', true), auth()->user())
+            ->get();
 
         return Inertia::render('Admin/Exams/Edit', [
             'exam' => $exam->load('examType'),
@@ -67,6 +87,8 @@ class ExamController extends Controller
 
     public function update(Request $request, Exam $exam)
     {
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+
         $validated = $request->validate([
             'exam_type_id' => 'required|exists:exam_types,id',
             'name' => 'required|string|max:255',
@@ -77,7 +99,10 @@ class ExamController extends Controller
             'passing_score' => 'required|integer|min:1',
             'max_attempts' => 'nullable|integer|min:1',
             'is_active' => 'boolean',
+            'require_telegram_verification' => 'boolean',
         ]);
+
+        $this->examTypeAccess->ensureCanAccess(auth()->user(), (int) $validated['exam_type_id']);
 
         $exam->update($validated);
 
@@ -87,6 +112,8 @@ class ExamController extends Controller
 
     public function destroy(Exam $exam)
     {
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+
         if ($exam->attempts()->count() > 0) {
             return back()->with('error', 'Невозможно удалить экзамен с существующими попытками');
         }
@@ -99,6 +126,8 @@ class ExamController extends Controller
 
     public function applicants(Exam $exam)
     {
+        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+
         $registrations = ExamRegistration::query()
             ->where('exam_registrations.exam_id', $exam->id)
             ->join('applicants', 'exam_registrations.applicant_id', '=', 'applicants.id')

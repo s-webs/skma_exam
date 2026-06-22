@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Public;
 
 use App\Exceptions\ExamAttemptException;
 use App\Http\Controllers\Controller;
+use App\Mail\ExamResultMail;
 use App\Models\ExamAttempt;
 use App\Services\ExamAttemptService;
 use App\Services\ExamResultPdfService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class ExamAttemptController extends Controller
@@ -108,16 +110,38 @@ class ExamAttemptController extends Controller
     {
         try {
             $attempt = $this->examAttemptService->findByToken($token);
+            $wasAlreadyCompleted = $attempt->status === 'completed';
             $result = $this->examAttemptService->finishAttempt($attempt);
 
-            $attempt->load(['applicant', 'exam']);
-            if ($attempt->applicant->telegram_chat_id) {
-                $this->telegramService->sendExamResultsWithReport(
-                    $attempt->applicant->telegram_chat_id,
-                    $attempt,
-                    $result,
-                    $this->examResultPdfService
-                );
+            if (! $wasAlreadyCompleted) {
+                $attempt->load(['applicant', 'exam']);
+                $exam = $attempt->exam;
+                $applicant = $attempt->applicant;
+
+                if ($exam->require_telegram_verification && $applicant->telegram_chat_id) {
+                    $this->telegramService->sendExamResultsWithReport(
+                        $applicant->telegram_chat_id,
+                        $attempt,
+                        $result,
+                        $this->examResultPdfService
+                    );
+                } elseif ($applicant->email) {
+                    $previousLocale = app()->getLocale();
+                    app()->setLocale($this->normalizeExamLocale($exam->language));
+
+                    try {
+                        Mail::to($applicant->email)->send(new ExamResultMail(
+                            $exam->name,
+                            $result->total_score,
+                            $result->passed,
+                            $this->examResultPdfService->publicUrl($attempt),
+                            $this->examResultPdfService->render($attempt),
+                            $this->examResultPdfService->filename($attempt),
+                        ));
+                    } finally {
+                        app()->setLocale($previousLocale);
+                    }
+                }
             }
         } catch (ExamAttemptException $e) {
             if ($request->wantsJson()) {
@@ -154,6 +178,7 @@ class ExamAttemptController extends Controller
                 'name' => $attempt->exam->name,
             ],
             'reportUrl' => $this->examResultPdfService->publicUrl($attempt),
+            'resultsDeliveryMethod' => $attempt->exam->require_telegram_verification ? 'telegram' : 'email',
             'result' => [
                 'passed' => $result->passed,
                 'total_score' => $result->total_score,
@@ -200,5 +225,13 @@ class ExamAttemptController extends Controller
                 'token' => $attempt->token,
             ],
         ];
+    }
+
+    private function normalizeExamLocale(string $locale): string
+    {
+        return match ($locale) {
+            'kz' => 'kk',
+            default => $locale,
+        };
     }
 }

@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,17 +17,67 @@ interface ExamType {
     is_active: boolean;
 }
 
-interface EditProps {
-    examType: ExamType;
+interface AssignableUser {
+    id: number;
+    name: string;
+    email: string;
 }
 
-export default function Edit({ examType }: EditProps) {
+interface AssignableRole {
+    id: number;
+    name: string;
+}
+
+interface EditProps {
+    examType: ExamType;
+    assignableUsers: AssignableUser[];
+    assignableRoles: AssignableRole[];
+    assignedUserIds: number[];
+    assignedRoleIds: number[];
+}
+
+interface SharedAuth {
+    auth: {
+        isDeveloper: boolean;
+    };
+}
+
+export default function Edit({
+    examType,
+    assignableUsers,
+    assignableRoles,
+    assignedUserIds,
+    assignedRoleIds,
+}: EditProps) {
     const { t } = useTranslation();
+    const { auth } = usePage<SharedAuth>().props;
+    const isDeveloper = auth.isDeveloper;
+
     const { data, setData, put, processing, errors } = useForm({
         name: examType.name,
         description: examType.description || '',
         is_active: examType.is_active,
+        user_ids: assignedUserIds,
+        role_ids: assignedRoleIds,
     });
+
+    const toggleUser = (userId: number, checked: boolean) => {
+        setData(
+            'user_ids',
+            checked
+                ? [...data.user_ids, userId]
+                : data.user_ids.filter((id) => id !== userId),
+        );
+    };
+
+    const toggleRole = (roleId: number, checked: boolean) => {
+        setData(
+            'role_ids',
+            checked
+                ? [...data.role_ids, roleId]
+                : data.role_ids.filter((id) => id !== roleId),
+        );
+    };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -96,6 +146,69 @@ export default function Edit({ examType }: EditProps) {
                                         {t('examTypes.isActive')}
                                     </Label>
                                 </div>
+
+                                {isDeveloper && (
+                                    <div className="space-y-4 rounded-lg border p-4">
+                                        <div>
+                                            <h3 className="font-medium">{t('examTypes.accessTitle')}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                {t('examTypes.accessHint')}
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>{t('examTypes.accessUsers')}</Label>
+                                            <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
+                                                {assignableUsers.length === 0 ? (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {t('examTypes.noAssignableUsers')}
+                                                    </p>
+                                                ) : (
+                                                    assignableUsers.map((user) => (
+                                                        <div key={user.id} className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={`user-${user.id}`}
+                                                                checked={data.user_ids.includes(user.id)}
+                                                                onCheckedChange={(checked) =>
+                                                                    toggleUser(user.id, checked as boolean)
+                                                                }
+                                                            />
+                                                            <Label
+                                                                htmlFor={`user-${user.id}`}
+                                                                className="cursor-pointer font-normal"
+                                                            >
+                                                                {user.name} ({user.email})
+                                                            </Label>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>{t('examTypes.accessRoles')}</Label>
+                                            <div className="space-y-2 rounded-md border p-3">
+                                                {assignableRoles.map((role) => (
+                                                    <div key={role.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`role-${role.id}`}
+                                                            checked={data.role_ids.includes(role.id)}
+                                                            onCheckedChange={(checked) =>
+                                                                toggleRole(role.id, checked as boolean)
+                                                            }
+                                                        />
+                                                        <Label
+                                                            htmlFor={`role-${role.id}`}
+                                                            className="cursor-pointer font-normal uppercase"
+                                                        >
+                                                            {role.name}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="flex justify-end gap-4">
                                     <Link href={route('admin.exam-types.index')}>
