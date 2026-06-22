@@ -30,9 +30,11 @@ interface Question {
     created_at: string;
 }
 
-interface Exam {
+import { getLocalizedName, LocalizedNameFields } from '@/lib/localized-name';
+
+interface Exam extends LocalizedNameFields {
     id: number;
-    name: string;
+    language?: string;
 }
 
 interface QuestionsIndexProps {
@@ -54,7 +56,7 @@ export default function Index({ exam, questions, canManageQuestions = true, back
 
     return (
         <AppLayout>
-            <Head title={t('questions.titleWithExam', { name: exam.name })} />
+            <Head title={t('questions.titleWithExam', { name: getLocalizedName(exam, exam.language ?? 'ru') })} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -71,7 +73,7 @@ export default function Index({ exam, questions, canManageQuestions = true, back
                         <div>
                             <h2 className="text-3xl font-bold tracking-tight">{t('questions.title')}</h2>
                             <p className="text-muted-foreground mt-2">
-                                {exam.name}
+                                {getLocalizedName(exam, exam.language ?? 'ru')}
                             </p>
                         </div>
                         {canManageQuestions && (

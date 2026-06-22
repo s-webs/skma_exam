@@ -70,7 +70,7 @@ class ExamAttemptService
                 'applicant_id' => $applicant->id,
                 'exam_registration_id' => $registration->id,
                 'token' => Str::random(64),
-                'date' => now()->toDateString(),
+                'date' => $registration->date?->toDateString() ?? now()->toDateString(),
                 'status' => 'pending',
             ]);
 

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from 'sonner';
+import { getLocalizedName, LocalizedNameFields } from '@/lib/localized-name';
 
 interface Answer {
     id?: number;
@@ -29,9 +29,9 @@ interface Question {
     explanation: string | null;
     is_active: boolean;
     answers: Answer[];
-    exam: {
+    exam: LocalizedNameFields & {
         id: number;
-        name: string;
+        language: string;
     };
 }
 
@@ -137,7 +137,7 @@ export default function Edit({ question }: EditProps) {
                         <CardHeader>
                             <CardTitle>{t('questions.editTitle')}</CardTitle>
                             <CardDescription>
-                                {t('questions.editDescription', { name: question.exam.name })}
+                                {t('questions.editDescription', { name: getLocalizedName(question.exam, question.exam.language) })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

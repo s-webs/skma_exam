@@ -7,11 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { PermissionCheckboxes } from '@/components/permission-checkboxes';
 
 interface Role {
     id: number;
     name: string;
+}
+
+interface PermissionGroup {
+    label: string;
+    permissions: string[];
 }
 
 interface User {
@@ -24,17 +30,44 @@ interface User {
 interface EditProps {
     user: User;
     roles: Role[];
+    permissionGroups: Record<string, PermissionGroup>;
+    assignedRoleIds: number[];
+    assignedPermissionNames: string[];
 }
 
-export default function Edit({ user, roles }: EditProps) {
+export default function Edit({
+    user,
+    roles,
+    permissionGroups,
+    assignedRoleIds,
+    assignedPermissionNames,
+}: EditProps) {
     const { t } = useTranslation();
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         name: user.name,
         email: user.email,
         password: '',
         password_confirmation: '',
-        role: user.roles[0]?.name || '',
+        role_ids: assignedRoleIds,
+        permission_names: assignedPermissionNames,
     });
+
+    transform((formData) => {
+        if (!formData.password) {
+            const { password: _password, password_confirmation: _confirmation, ...rest } = formData;
+
+            return rest;
+        }
+
+        return formData;
+    });
+
+    const toggleRole = (roleId: number, checked: boolean) => {
+        setData(
+            'role_ids',
+            checked ? [...data.role_ids, roleId] : data.role_ids.filter((id) => id !== roleId),
+        );
+    };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -46,7 +79,7 @@ export default function Edit({ user, roles }: EditProps) {
             <Head title={t('users.editTitle')} />
 
             <div className="py-12">
-                <div className="mx-auto max-w-2xl sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
                     <div className="mb-6">
                         <Link href={route('admin.users.index')}>
                             <Button variant="ghost" size="sm">
@@ -59,9 +92,7 @@ export default function Edit({ user, roles }: EditProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t('users.editTitle')}</CardTitle>
-                            <CardDescription>
-                                {t('users.editDescription')}
-                            </CardDescription>
+                            <CardDescription>{t('users.editDescription')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
@@ -73,9 +104,7 @@ export default function Edit({ user, roles }: EditProps) {
                                         onChange={(e) => setData('name', e.target.value)}
                                         required
                                     />
-                                    {errors.name && (
-                                        <p className="text-sm text-red-600">{errors.name}</p>
-                                    )}
+                                    {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -87,19 +116,47 @@ export default function Edit({ user, roles }: EditProps) {
                                         onChange={(e) => setData('email', e.target.value)}
                                         required
                                     />
-                                    {errors.email && (
-                                        <p className="text-sm text-red-600">{errors.email}</p>
-                                    )}
+                                    {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="password">{t('users.password')}</Label>
+                                    <Label>{t('users.roles')}</Label>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        {roles.map((role) => (
+                                            <div key={role.id} className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id={`role-${role.id}`}
+                                                    checked={data.role_ids.includes(role.id)}
+                                                    onCheckedChange={(checked) =>
+                                                        toggleRole(role.id, checked === true)
+                                                    }
+                                                />
+                                                <Label htmlFor={`role-${role.id}`} className="font-normal">
+                                                    {t(`users.${role.name}`, { defaultValue: role.name })}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>{t('users.directPermissions')}</Label>
+                                    <PermissionCheckboxes
+                                        permissionGroups={permissionGroups}
+                                        selected={data.permission_names}
+                                        onChange={(permissions) => setData('permission_names', permissions)}
+                                        idPrefix="user-perm"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">{t('users.newPasswordOptional')}</Label>
                                     <Input
                                         id="password"
                                         type="password"
+                                        autoComplete="new-password"
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
-                                        placeholder="Leave blank to keep current password"
                                     />
                                     {errors.password && (
                                         <p className="text-sm text-red-600">{errors.password}</p>
@@ -111,34 +168,10 @@ export default function Edit({ user, roles }: EditProps) {
                                     <Input
                                         id="password_confirmation"
                                         type="password"
+                                        autoComplete="new-password"
                                         value={data.password_confirmation}
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
                                     />
-                                    {errors.password_confirmation && (
-                                        <p className="text-sm text-red-600">{errors.password_confirmation}</p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="role">{t('users.role')}</Label>
-                                    <Select
-                                        value={data.role}
-                                        onValueChange={(value) => setData('role', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t('users.selectRole')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map((role) => (
-                                                <SelectItem key={role.id} value={role.name}>
-                                                    {t(`users.${role.name}`)}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.role && (
-                                        <p className="text-sm text-red-600">{errors.role}</p>
-                                    )}
                                 </div>
 
                                 <div className="flex justify-end gap-4">

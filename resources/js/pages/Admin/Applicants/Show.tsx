@@ -242,7 +242,7 @@ export default function Show({ applicant }: ShowProps) {
                                                 {applicant.exam_attempts.map((attempt) => (
                                                     <TableRow key={attempt.id}>
                                                         <TableCell className="font-medium">
-                                                            {attempt.exam.name}
+                                                            {attempt.exam.name_ru}
                                                         </TableCell>
                                                         <TableCell>
                                                             {new Date(attempt.date).toLocaleDateString('ru-RU')}

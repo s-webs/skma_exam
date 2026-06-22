@@ -17,15 +17,21 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
+import { LocalizedNameFields } from '@/components/localized-name-fields';
+
 interface ExamType {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
 }
 
 interface Exam {
     id: number;
     exam_type_id: number;
-    name: string;
+    name_ru: string;
+    name_kk: string | null;
+    name_en: string | null;
     description: string | null;
     language: string;
     duration_minutes: number;
@@ -45,7 +51,9 @@ export default function Edit({ exam, examTypes }: EditProps) {
     const { t } = useTranslation();
     const { data, setData, put, processing, errors } = useForm({
         exam_type_id: exam.exam_type_id.toString(),
-        name: exam.name,
+        name_ru: exam.name_ru ?? '',
+        name_kk: exam.name_kk || '',
+        name_en: exam.name_en || '',
         description: exam.description || '',
         language: exam.language,
         duration_minutes: exam.duration_minutes,
@@ -97,7 +105,7 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                         <SelectContent>
                                             {examTypes.map((type) => (
                                                 <SelectItem key={type.id} value={type.id.toString()}>
-                                                    {type.name}
+                                                    {type.name_ru}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -107,19 +115,12 @@ export default function Edit({ exam, examTypes }: EditProps) {
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">{t('exams.examName')}</Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        required
-                                    />
-                                    {errors.name && (
-                                        <p className="text-sm text-red-600">{errors.name}</p>
-                                    )}
-                                </div>
+                                <LocalizedNameFields
+                                    values={data}
+                                    onChange={(field, value) => setData(field, value)}
+                                    errors={errors}
+                                    idPrefix="exam"
+                                />
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">{t('exams.descriptionLabel')}</Label>

@@ -10,9 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 
+import { LocalizedNameFields } from '@/components/localized-name-fields';
+
 interface ExamType {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk: string | null;
+    name_en: string | null;
     description: string | null;
     is_active: boolean;
 }
@@ -39,6 +43,7 @@ interface EditProps {
 interface SharedAuth {
     auth: {
         isDeveloper: boolean;
+        permissions?: string[];
     };
 }
 
@@ -51,10 +56,13 @@ export default function Edit({
 }: EditProps) {
     const { t } = useTranslation();
     const { auth } = usePage<SharedAuth>().props;
-    const isDeveloper = auth.isDeveloper;
+    const canManageAccess =
+        auth.isDeveloper || (auth.permissions?.includes('exam-types.manage-access') ?? false);
 
     const { data, setData, put, processing, errors } = useForm({
-        name: examType.name,
+        name_ru: examType.name_ru ?? '',
+        name_kk: examType.name_kk || '',
+        name_en: examType.name_en || '',
         description: examType.description || '',
         is_active: examType.is_active,
         user_ids: assignedUserIds,
@@ -108,20 +116,13 @@ export default function Edit({
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">{t('examTypes.name')}</Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        required
-                                        autoFocus
-                                    />
-                                    {errors.name && (
-                                        <p className="text-sm text-red-600">{errors.name}</p>
-                                    )}
-                                </div>
+                                <LocalizedNameFields
+                                    values={data}
+                                    onChange={(field, value) => setData(field, value)}
+                                    errors={errors}
+                                    idPrefix="exam-type"
+                                    autoFocus
+                                />
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">{t('examTypes.descriptionLabel')}</Label>
@@ -147,7 +148,7 @@ export default function Edit({
                                     </Label>
                                 </div>
 
-                                {isDeveloper && (
+                                {canManageAccess && (
                                     <div className="space-y-4 rounded-lg border p-4">
                                         <div>
                                             <h3 className="font-medium">{t('examTypes.accessTitle')}</h3>

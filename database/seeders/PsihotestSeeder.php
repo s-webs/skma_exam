@@ -23,13 +23,13 @@ class PsihotestSeeder extends Seeder
         $examType = ExamType::firstOrCreate(
             ['slug' => 'psixotest-50-minut'],
             [
-                'name' => 'Психотест (50 минут)',
+                'name_ru' => 'Психотест (50 минут)',
                 'description' => 'Психологическое тестирование для поступающих',
                 'is_active' => true,
             ]
         );
 
-        $this->command->info('Тип экзамена: ' . $examType->name);
+        $this->command->info('Тип экзамена: ' . $examType->name_ru);
 
         // Создаем или находим экзамен на русском языке
         $examRu = Exam::firstOrCreate(
@@ -38,7 +38,7 @@ class PsihotestSeeder extends Seeder
                 'language' => 'ru',
             ],
             [
-                'name' => 'Русский',
+                'name_ru' => 'Русский',
                 'description' => 'Психотест на русском языке',
                 'duration_minutes' => 50,
                 'questions_count' => 30,
@@ -49,7 +49,7 @@ class PsihotestSeeder extends Seeder
             ]
         );
 
-        $this->command->info('Экзамен: ' . $examRu->name);
+        $this->command->info('Экзамен: ' . $examRu->name_ru);
 
         // Импортируем русские вопросы (только если их еще нет)
         if ($examRu->questions()->count() === 0) {
@@ -65,7 +65,7 @@ class PsihotestSeeder extends Seeder
                 'language' => 'kz',
             ],
             [
-                'name' => 'Қазақша',
+                'name_ru' => 'Қазақша',
                 'description' => 'Психотест на казахском языке',
                 'duration_minutes' => 50,
                 'questions_count' => 30,
@@ -76,7 +76,7 @@ class PsihotestSeeder extends Seeder
             ]
         );
 
-        $this->command->info('Экзамен: ' . $examKz->name);
+        $this->command->info('Экзамен: ' . $examKz->name_ru);
 
         // Импортируем казахские вопросы (только если их еще нет)
         if ($examKz->questions()->count() === 0) {

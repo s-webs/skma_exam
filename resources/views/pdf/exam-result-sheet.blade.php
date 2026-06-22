@@ -79,7 +79,7 @@
             <tbody>
                 <tr>
                     <th>{{ __('exam_report.exam_type_and_name') }}</th>
-                    <td>{{ $exam->examType?->name ?? '—' }} / {{ $exam->name }}</td>
+                    <td>{{ $exam->examType?->localizedName($exam->language) ?? '—' }} / {{ $exam->localizedName($exam->language) }}</td>
                 </tr>
                 <tr>
                     <th>{{ __('exam_report.correct_answers') }}</th>

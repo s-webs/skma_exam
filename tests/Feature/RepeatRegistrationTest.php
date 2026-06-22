@@ -19,7 +19,7 @@ beforeEach(function () {
     $this->admin = User::factory()->create();
 
     $this->examType = ExamType::create([
-        'name' => 'Repeat Reg Type',
+        'name_ru' => 'Repeat Reg Type',
         'slug' => 'repeat-reg',
         'description' => null,
         'is_active' => true,
@@ -27,7 +27,7 @@ beforeEach(function () {
 
     $this->exam = Exam::create([
         'exam_type_id' => $this->examType->id,
-        'name' => 'Repeat Exam',
+        'name_ru' => 'Repeat Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,

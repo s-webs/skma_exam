@@ -7,32 +7,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { PermissionCheckboxes } from '@/components/permission-checkboxes';
 
 interface Role {
     id: number;
     name: string;
 }
 
-interface CreateProps {
-    roles: Role[];
+interface PermissionGroup {
+    label: string;
+    permissions: string[];
 }
 
-export default function Create({ roles }: CreateProps) {
+interface CreateProps {
+    roles: Role[];
+    permissionGroups: Record<string, PermissionGroup>;
+}
+
+export default function Create({ roles, permissionGroups }: CreateProps) {
     const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
         password: '',
         password_confirmation: '',
-        role: 'registrator',
+        role_ids: [] as number[],
+        permission_names: [] as string[],
     });
+
+    const toggleRole = (roleId: number, checked: boolean) => {
+        setData(
+            'role_ids',
+            checked ? [...data.role_ids, roleId] : data.role_ids.filter((id) => id !== roleId),
+        );
+    };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -57,9 +66,7 @@ export default function Create({ roles }: CreateProps) {
                     <Card>
                         <CardHeader>
                             <CardTitle>{t('users.createTitle')}</CardTitle>
-                            <CardDescription>
-                                {t('users.createDescription')}
-                            </CardDescription>
+                            <CardDescription>{t('users.createDescription')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
@@ -67,15 +74,12 @@ export default function Create({ roles }: CreateProps) {
                                     <Label htmlFor="name">{t('users.name')}</Label>
                                     <Input
                                         id="name"
-                                        type="text"
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
                                         required
                                         autoFocus
                                     />
-                                    {errors.name && (
-                                        <p className="text-sm text-red-600">{errors.name}</p>
-                                    )}
+                                    {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
                                 </div>
 
                                 <div className="space-y-2">
@@ -87,29 +91,40 @@ export default function Create({ roles }: CreateProps) {
                                         onChange={(e) => setData('email', e.target.value)}
                                         required
                                     />
-                                    {errors.email && (
-                                        <p className="text-sm text-red-600">{errors.email}</p>
+                                    {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>{t('users.roles')}</Label>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                        {roles.map((role) => (
+                                            <div key={role.id} className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id={`role-${role.id}`}
+                                                    checked={data.role_ids.includes(role.id)}
+                                                    onCheckedChange={(checked) =>
+                                                        toggleRole(role.id, checked === true)
+                                                    }
+                                                />
+                                                <Label htmlFor={`role-${role.id}`} className="font-normal">
+                                                    {t(`users.${role.name}`, { defaultValue: role.name })}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {errors.role_ids && (
+                                        <p className="text-sm text-red-600">{errors.role_ids}</p>
                                     )}
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="role">{t('users.role')}</Label>
-                                    <Select
-                                        value={data.role}
-                                        onValueChange={(value) => setData('role', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t('users.selectRole')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="developer">{t('users.developer')}</SelectItem>
-                                            <SelectItem value="ktbo">{t('users.ktbo')}</SelectItem>
-                                            <SelectItem value="registrator">{t('users.registrator')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.role && (
-                                        <p className="text-sm text-red-600">{errors.role}</p>
-                                    )}
+                                    <Label>{t('users.directPermissions')}</Label>
+                                    <PermissionCheckboxes
+                                        permissionGroups={permissionGroups}
+                                        selected={data.permission_names}
+                                        onChange={(permissions) => setData('permission_names', permissions)}
+                                        idPrefix="user-perm"
+                                    />
                                 </div>
 
                                 <div className="space-y-2">
@@ -135,9 +150,6 @@ export default function Create({ roles }: CreateProps) {
                                         onChange={(e) => setData('password_confirmation', e.target.value)}
                                         required
                                     />
-                                    {errors.password_confirmation && (
-                                        <p className="text-sm text-red-600">{errors.password_confirmation}</p>
-                                    )}
                                 </div>
 
                                 <div className="flex justify-end gap-4">

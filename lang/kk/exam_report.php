@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Емтихан нәтижелері парағы',
-    'based_on' => 'Негізінде: ID :id :date ж.',
+    'based_on' => 'ID :id :date ж.',
     'full_name' => 'ТАӘ',
     'exam_result' => 'Емтихан нәтижесі',
     'exam' => 'Емтихан',

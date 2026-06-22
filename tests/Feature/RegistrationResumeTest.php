@@ -15,7 +15,7 @@ beforeEach(function () {
     $this->admin = User::factory()->create();
 
     $this->examType = ExamType::create([
-        'name' => 'Psixotest',
+        'name_ru' => 'Psixotest',
         'slug' => 'psixotest-reg',
         'description' => null,
         'is_active' => true,
@@ -23,7 +23,7 @@ beforeEach(function () {
 
     $this->exam = Exam::create([
         'exam_type_id' => $this->examType->id,
-        'name' => 'Русский',
+        'name_ru' => 'Русский',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 50,

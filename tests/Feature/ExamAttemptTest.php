@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->admin->assignRole('ktbo');
 
     $this->examType = ExamType::create([
-        'name' => 'Test Type',
+        'name_ru' => 'Test Type',
         'slug' => 'test-type',
         'description' => null,
         'is_active' => true,
@@ -32,7 +32,7 @@ beforeEach(function () {
 
     $this->exam = Exam::create([
         'exam_type_id' => $this->examType->id,
-        'name' => 'Test Exam',
+        'name_ru' => 'Test Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,

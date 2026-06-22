@@ -12,11 +12,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { AdminLocalizedName } from '@/components/admin-localized-name';
 import { Badge } from '@/components/ui/badge';
 
 interface ExamType {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
 }
 
 interface User {
@@ -26,7 +29,9 @@ interface User {
 
 interface Exam {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
     exam_type: ExamType;
     language: string;
     duration_minutes: number;
@@ -114,8 +119,12 @@ export default function Index({ exams }: ExamsIndexProps) {
                                     ) : (
                                         exams.map((exam) => (
                                             <TableRow key={exam.id}>
-                                                <TableCell className="font-medium">{exam.name}</TableCell>
-                                                <TableCell>{exam.exam_type.name}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    <AdminLocalizedName names={exam} />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <AdminLocalizedName names={exam.exam_type} />
+                                                </TableCell>
                                                 <TableCell>{getLanguageName(exam.language)}</TableCell>
                                                 <TableCell>{exam.duration_minutes} {t('exams.minutes')}</TableCell>
                                                 <TableCell>

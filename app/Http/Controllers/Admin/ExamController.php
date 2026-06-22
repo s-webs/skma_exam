@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\ExamRegistration;
 use App\Models\ExamType;
+use App\Services\AuthorizationService;
 use App\Services\ExamTypeAccessService;
 use App\Support\ExamRegistrationRows;
 use Illuminate\Http\Request;
@@ -14,7 +15,8 @@ use Inertia\Inertia;
 class ExamController extends Controller
 {
     public function __construct(
-        protected ExamTypeAccessService $examTypeAccess
+        protected ExamTypeAccessService $examTypeAccess,
+        protected AuthorizationService $authorization
     ) {}
 
     public function index()
@@ -50,7 +52,9 @@ class ExamController extends Controller
     {
         $validated = $request->validate([
             'exam_type_id' => 'required|exists:exam_types,id',
-            'name' => 'required|string|max:255',
+            'name_ru' => 'required|string|max:255',
+            'name_kk' => 'nullable|string|max:255',
+            'name_en' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'language' => 'required|in:kz,ru,en',
             'duration_minutes' => 'required|integer|min:1|max:300',
@@ -61,7 +65,7 @@ class ExamController extends Controller
             'require_telegram_verification' => 'boolean',
         ]);
 
-        $this->examTypeAccess->ensureCanAccess(auth()->user(), (int) $validated['exam_type_id']);
+        $this->authorization->ensureCan(auth()->user(), 'exams.create', (int) $validated['exam_type_id']);
 
         $validated['created_by_user_id'] = auth()->id();
 
@@ -73,7 +77,7 @@ class ExamController extends Controller
 
     public function edit(Exam $exam)
     {
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'exams.edit', $exam);
 
         $examTypes = $this->examTypeAccess
             ->scopeAccessible(ExamType::where('is_active', true), auth()->user())
@@ -87,11 +91,13 @@ class ExamController extends Controller
 
     public function update(Request $request, Exam $exam)
     {
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'exams.edit', $exam);
 
         $validated = $request->validate([
             'exam_type_id' => 'required|exists:exam_types,id',
-            'name' => 'required|string|max:255',
+            'name_ru' => 'required|string|max:255',
+            'name_kk' => 'nullable|string|max:255',
+            'name_en' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'language' => 'required|in:kz,ru,en',
             'duration_minutes' => 'required|integer|min:1|max:300',
@@ -102,7 +108,7 @@ class ExamController extends Controller
             'require_telegram_verification' => 'boolean',
         ]);
 
-        $this->examTypeAccess->ensureCanAccess(auth()->user(), (int) $validated['exam_type_id']);
+        $this->authorization->ensureCan(auth()->user(), 'exams.edit', (int) $validated['exam_type_id']);
 
         $exam->update($validated);
 
@@ -112,7 +118,7 @@ class ExamController extends Controller
 
     public function destroy(Exam $exam)
     {
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'exams.delete', $exam);
 
         if ($exam->attempts()->count() > 0) {
             return back()->with('error', 'Невозможно удалить экзамен с существующими попытками');
@@ -126,7 +132,7 @@ class ExamController extends Controller
 
     public function applicants(Exam $exam)
     {
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'exams.view', $exam);
 
         $registrations = ExamRegistration::query()
             ->where('exam_registrations.exam_id', $exam->id)

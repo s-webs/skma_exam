@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
 use App\Models\Question;
-use App\Services\ExamTypeAccessService;
+use App\Services\AuthorizationService;
 use App\Services\ImageOptimizationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,19 +13,12 @@ use Inertia\Inertia;
 class QuestionController extends Controller
 {
     public function __construct(
-        protected ExamTypeAccessService $examTypeAccess
+        protected AuthorizationService $authorization
     ) {}
-
-    private function ensureCanManageQuestions(): void
-    {
-        if (auth()->user()->hasRole('registrator')) {
-            abort(403, 'Регистратор может только просматривать вопросы.');
-        }
-    }
 
     public function index(Exam $exam)
     {
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'questions.view', $exam);
 
         $questions = $exam->questions()
             ->with('answers')
@@ -34,21 +27,22 @@ class QuestionController extends Controller
             ->get();
 
         $exam->loadMissing('examType');
+        $user = auth()->user();
 
         return Inertia::render('Admin/Questions/Index', [
             'exam' => $exam,
             'questions' => $questions,
-            'canManageQuestions' => ! auth()->user()->hasRole('registrator'),
-            'backUrl' => auth()->user()->hasRole('registrator')
-                ? route('admin.exam-types.show', $exam->exam_type_id)
-                : route('admin.exams.index'),
+            'canManageQuestions' => $this->authorization->can($user, 'questions.create', $exam->examType),
+            'backUrl' => $this->authorization->can($user, 'exams.view')
+                ? route('admin.exams.index')
+                : route('admin.exam-types.show', $exam->exam_type_id),
         ]);
     }
 
     public function create(Exam $exam)
     {
-        $this->ensureCanManageQuestions();
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'questions.create', $exam);
+
         return Inertia::render('Admin/Questions/Create', [
             'exam' => $exam,
         ]);
@@ -56,8 +50,7 @@ class QuestionController extends Controller
 
     public function store(Request $request, Exam $exam)
     {
-        $this->ensureCanManageQuestions();
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'questions.create', $exam);
 
         $validated = $request->validate([
             'content' => 'nullable|string',
@@ -128,9 +121,8 @@ class QuestionController extends Controller
 
     public function edit(Question $question)
     {
-        $this->ensureCanManageQuestions();
         $question->load('answers', 'exam');
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $question->exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'questions.edit', $question->exam);
 
         return Inertia::render('Admin/Questions/Edit', [
             'question' => [
@@ -141,7 +133,7 @@ class QuestionController extends Controller
                 'image_url' => $question->imageUrl(),
                 'explanation' => $question->explanation,
                 'is_active' => $question->is_active,
-                'exam' => $question->exam->only(['id', 'name']),
+                'exam' => $question->exam->only(['id', 'name_ru', 'name_kk', 'name_en', 'language']),
                 'answers' => $question->answers->map(fn ($answer) => [
                     'id' => $answer->id,
                     'content' => $answer->content,
@@ -155,9 +147,8 @@ class QuestionController extends Controller
 
     public function update(Request $request, Question $question)
     {
-        $this->ensureCanManageQuestions();
         $question->loadMissing('exam');
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $question->exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'questions.edit', $question->exam);
 
         $validated = $request->validate([
             'content' => 'nullable|string',
@@ -271,9 +262,8 @@ class QuestionController extends Controller
 
     public function destroy(Question $question)
     {
-        $this->ensureCanManageQuestions();
         $question->loadMissing('exam');
-        $this->examTypeAccess->ensureCanAccessExam(auth()->user(), $question->exam);
+        $this->authorization->ensureCanAccessExam(auth()->user(), 'questions.delete', $question->exam);
 
         $examId = $question->exam_id;
         $question->delete();

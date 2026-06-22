@@ -6,6 +6,7 @@ use App\Exceptions\ExamAttemptException;
 use App\Http\Controllers\Controller;
 use App\Mail\ExamInviteMail;
 use App\Models\ExamRegistration;
+use App\Services\AuthorizationService;
 use App\Services\ExamAttemptService;
 use App\Services\ExamTypeAccessService;
 use App\Services\TelegramService;
@@ -20,11 +21,12 @@ class ExamRegistrationController extends Controller
         protected ExamAttemptService $examAttemptService,
         protected TelegramService $telegramService,
         protected ExamTypeAccessService $examTypeAccess,
+        protected AuthorizationService $authorization,
     ) {}
 
     public function review(Request $request, ExamRegistration $examRegistration)
     {
-        $this->examTypeAccess->ensureCanAccessRegistration(auth()->user(), $examRegistration);
+        $this->authorization->ensureCanAccessRegistration(auth()->user(), 'exam-registrations.view', $examRegistration);
 
         $examRegistration->load([
             'applicant',
@@ -33,7 +35,7 @@ class ExamRegistrationController extends Controller
         ]);
 
         $user = auth()->user();
-        $isRegistrator = $user->hasRole('registrator');
+        $canUnapprove = $this->authorization->can($user, 'exam-registrations.unapprove', $examRegistration->exam->examType);
 
         return Inertia::render('Admin/ExamRegistrations/Review', [
             'registration' => [
@@ -48,17 +50,18 @@ class ExamRegistrationController extends Controller
                     : null,
             ],
             'applicant' => $examRegistration->applicant,
-            'exam' => $examRegistration->exam->only(['id', 'name', 'language']),
-            'examType' => $examRegistration->exam->examType->only(['id', 'name']),
-            'canApprove' => ! $examRegistration->approved,
-            'canUnapprove' => ! $isRegistrator && $examRegistration->approved,
+            'exam' => $examRegistration->exam->only(['id', 'name_ru', 'name_kk', 'name_en', 'language']),
+            'examType' => $examRegistration->exam->examType->only(['id', 'name_ru', 'name_kk', 'name_en']),
+            'canApprove' => ! $examRegistration->approved
+                && $this->authorization->can($user, 'exam-registrations.approve', $examRegistration->exam->examType),
+            'canUnapprove' => $canUnapprove && $examRegistration->approved,
             'backUrl' => $this->resolveReviewBackUrl($request, $examRegistration),
         ]);
     }
 
     public function approve(ExamRegistration $examRegistration)
     {
-        $this->examTypeAccess->ensureCanAccessRegistration(auth()->user(), $examRegistration);
+        $this->authorization->ensureCanAccessRegistration(auth()->user(), 'exam-registrations.approve', $examRegistration);
 
         try {
             $this->processApproval($examRegistration);
@@ -97,7 +100,7 @@ class ExamRegistrationController extends Controller
         foreach ($registrations as $registration) {
             $registration->loadMissing('exam.examType');
 
-            if (! $this->examTypeAccess->canAccess($user, $registration->exam->examType)) {
+            if (! $this->authorization->can($user, 'exam-registrations.approve', $registration->exam->examType)) {
                 $errors[] = "Запись #{$registration->id}: нет доступа.";
 
                 continue;
@@ -132,11 +135,7 @@ class ExamRegistrationController extends Controller
 
     public function unapprove(ExamRegistration $examRegistration)
     {
-        if (auth()->user()->hasRole('registrator')) {
-            abort(403, 'Регистратор не может отменять одобрение.');
-        }
-
-        $this->examTypeAccess->ensureCanAccessRegistration(auth()->user(), $examRegistration);
+        $this->authorization->ensureCanAccessRegistration(auth()->user(), 'exam-registrations.unapprove', $examRegistration);
 
         $examRegistration->update([
             'approved' => false,
@@ -145,6 +144,76 @@ class ExamRegistrationController extends Controller
         ]);
 
         return back()->with('success', 'Одобрение записи на экзамен отменено');
+    }
+
+    public function updateDate(Request $request, ExamRegistration $examRegistration)
+    {
+        $this->authorization->ensureCanAccessRegistration(auth()->user(), 'exam-registrations.edit-date', $examRegistration);
+
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+        ]);
+
+        $this->applyRegistrationDate($examRegistration, $validated['date']);
+
+        return back()->with('success', 'Дата регистрации обновлена.');
+    }
+
+    public function bulkUpdateDate(Request $request)
+    {
+        $validated = $request->validate([
+            'registration_ids' => ['required', 'array', 'min:1'],
+            'registration_ids.*' => ['integer', 'exists:exam_registrations,id'],
+            'date' => ['required', 'date'],
+        ]);
+
+        $user = auth()->user();
+
+        $registrations = ExamRegistration::query()
+            ->whereIn('id', $validated['registration_ids'])
+            ->with(['exam.examType'])
+            ->get();
+
+        $updatedCount = 0;
+        $errors = [];
+
+        foreach ($registrations as $registration) {
+            $registration->loadMissing('exam.examType');
+
+            if (! $this->authorization->can($user, 'exam-registrations.edit-date', $registration->exam->examType)) {
+                $errors[] = "Запись #{$registration->id}: нет доступа.";
+
+                continue;
+            }
+
+            $this->applyRegistrationDate($registration, $validated['date']);
+            $updatedCount++;
+        }
+
+        if ($updatedCount === 0 && $errors !== []) {
+            return back()->withErrors([
+                'date' => $errors[0],
+            ])->with('bulk_date_errors', $errors);
+        }
+
+        $message = "Обновлено дат: {$updatedCount}.";
+
+        if ($errors !== []) {
+            $message .= ' Не удалось обновить: '.count($errors).'.';
+        }
+
+        return back()
+            ->with('success', $message)
+            ->with('bulk_date_errors', $errors);
+    }
+
+    private function applyRegistrationDate(ExamRegistration $examRegistration, string $date): void
+    {
+        DB::transaction(function () use ($examRegistration, $date) {
+            $examRegistration->update(['date' => $date]);
+
+            $examRegistration->examAttempts()->update(['date' => $date]);
+        });
     }
 
     private function resolveReviewBackUrl(Request $request, ExamRegistration $examRegistration): string
@@ -178,7 +247,7 @@ class ExamRegistrationController extends Controller
             if ($exam->require_telegram_verification) {
                 $sent = $this->telegramService->sendExamInvite(
                     $applicant->telegram_chat_id,
-                    $exam->name,
+                    $exam->localizedName($exam->language),
                     $examUrl,
                     $exam->duration_minutes
                 );
@@ -190,7 +259,7 @@ class ExamRegistrationController extends Controller
                 }
             } else {
                 Mail::to($applicant->email)->send(new ExamInviteMail(
-                    $exam->name,
+                    $exam->localizedName($exam->language),
                     $examUrl,
                     $exam->duration_minutes
                 ));

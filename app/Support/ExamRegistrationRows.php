@@ -90,6 +90,7 @@ class ExamRegistrationRows
         return [
             'attempt_id' => $attempt?->id,
             'registration_id' => $registration->id,
+            'date' => $registration->date?->toDateString(),
             'status' => $attempt?->status,
             'approved' => $registration->approved,
             'approved_at' => $registration->approved_at?->toIso8601String(),
@@ -110,7 +111,7 @@ class ExamRegistrationRows
             'exam' => $registration->relationLoaded('exam') && $registration->exam
                 ? [
                     'id' => $registration->exam->id,
-                    'name' => $registration->exam->name,
+                    'name' => $registration->exam->localizedName($registration->exam->language),
                 ]
                 : null,
         ];

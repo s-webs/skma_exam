@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Exam results sheet',
-    'based_on' => 'Based on: ID :id dated :date',
+    'based_on' => 'ID :id dated :date',
     'full_name' => 'Full name',
     'exam_result' => 'Exam result',
     'exam' => 'Exam',

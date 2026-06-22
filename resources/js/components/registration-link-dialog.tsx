@@ -1,4 +1,3 @@
-import { Head, Link } from '@inertiajs/react';
 import { ExternalLink, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,16 +12,15 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getLocalizedName, LocalizedNameFields } from '@/lib/localized-name';
 
-interface Exam {
+interface Exam extends LocalizedNameFields {
     id: number;
-    name: string;
     language: string;
 }
 
-interface ExamType {
+interface ExamType extends LocalizedNameFields {
     id: number;
-    name: string;
     slug: string;
     exams: Exam[];
 }
@@ -32,9 +30,10 @@ interface RegistrationLinkDialogProps {
 }
 
 export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [copied, setCopied] = useState(false);
     const registrationUrl = `${window.location.origin}/register/${examType.slug}`;
+    const examTypeName = getLocalizedName(examType, i18n.language);
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(registrationUrl);
@@ -54,7 +53,7 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
                 <DialogHeader>
                     <DialogTitle>{t('registrationLink.title')}</DialogTitle>
                     <DialogDescription>
-                        {t('registrationLink.description', { name: examType.name })}
+                        {t('registrationLink.description', { name: examTypeName })}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -82,7 +81,7 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
                         <ul className="space-y-1">
                             {examType.exams.map((exam) => (
                                 <li key={exam.id} className="text-sm text-muted-foreground">
-                                    • {exam.name}
+                                    • {getLocalizedName(exam, exam.language)}
                                 </li>
                             ))}
                         </ul>
@@ -95,12 +94,12 @@ export function RegistrationLinkDialog({ examType }: RegistrationLinkDialogProps
                     </div>
 
                     <div className="flex justify-end">
-                        <Link href={registrationUrl} target="_blank">
+                        <a href={registrationUrl} target="_blank" rel="noreferrer">
                             <Button variant="outline">
                                 <ExternalLink className="mr-2 h-4 w-4" />
                                 {t('registrationLink.openPage')}
                             </Button>
-                        </Link>
+                        </a>
                     </div>
                 </div>
             </DialogContent>

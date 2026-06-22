@@ -23,13 +23,13 @@ class Psiho2Seeder extends Seeder
         $examType = ExamType::firstOrCreate(
             ['slug' => 'psixotest-100-minut'],
             [
-                'name' => 'Психотест (100 минут)',
+                'name_ru' => 'Психотест (100 минут)',
                 'description' => 'Психологическое тестирование для поступающих',
                 'is_active' => true,
             ]
         );
 
-        $this->command->info('Тип экзамена: ' . $examType->name);
+        $this->command->info('Тип экзамена: ' . $examType->name_ru);
 
         // Создаем экзамен на русском языке
         $examRu = Exam::firstOrCreate(
@@ -38,7 +38,7 @@ class Psiho2Seeder extends Seeder
                 'language' => 'ru',
             ],
             [
-                'name' => 'Русский',
+                'name_ru' => 'Русский',
                 'description' => 'Психотест на русском языке',
                 'duration_minutes' => 100,
                 'questions_count' => 60,
@@ -49,7 +49,7 @@ class Psiho2Seeder extends Seeder
             ]
         );
 
-        $this->command->info('Экзамен: ' . $examRu->name);
+        $this->command->info('Экзамен: ' . $examRu->name_ru);
 
         // Импортируем русские вопросы
         if ($examRu->questions()->count() === 0) {
@@ -65,7 +65,7 @@ class Psiho2Seeder extends Seeder
                 'language' => 'kz',
             ],
             [
-                'name' => 'Қазақша',
+                'name_ru' => 'Қазақша',
                 'description' => 'Психотест на казахском языке',
                 'duration_minutes' => 100,
                 'questions_count' => 60,
@@ -76,7 +76,7 @@ class Psiho2Seeder extends Seeder
             ]
         );
 
-        $this->command->info('Экзамен: ' . $examKz->name);
+        $this->command->info('Экзамен: ' . $examKz->name_ru);
 
         // Импортируем казахские вопросы
         if ($examKz->questions()->count() === 0) {
@@ -92,7 +92,7 @@ class Psiho2Seeder extends Seeder
                 'language' => 'en',
             ],
             [
-                'name' => 'English',
+                'name_ru' => 'English',
                 'description' => 'Психотест на английском языке',
                 'duration_minutes' => 100,
                 'questions_count' => 60,
@@ -103,7 +103,7 @@ class Psiho2Seeder extends Seeder
             ]
         );
 
-        $this->command->info('Экзамен: ' . $examEn->name);
+        $this->command->info('Экзамен: ' . $examEn->name_ru);
 
         // Импортируем английские вопросы
         if ($examEn->questions()->count() === 0) {

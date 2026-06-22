@@ -15,13 +15,13 @@ class StaticPsiho2Seeder extends Seeder
         $examType = ExamType::firstOrCreate(
             ['slug' => 'psixotest-100-minut'],
             [
-                'name' => 'Психотест (100 минут)',
+                'name_ru' => 'Психотест (100 минут)',
                 'description' => 'Психологическое тестирование для поступающих',
                 'is_active' => true,
             ]
         );
 
-        $this->command->info('Тип экзамена: ' . $examType->name);
+        $this->command->info('Тип экзамена: ' . $examType->name_ru);
 
         $this->seedExam($examType, 'ru', 'Русский', 'Психотест на русском языке', $this->getQuestionsRu());
         $this->seedExam($examType, 'kz', 'Қазақша', 'Психотест на казахском языке', $this->getQuestionsKz());
@@ -38,7 +38,7 @@ class StaticPsiho2Seeder extends Seeder
                 'language' => $language,
             ],
             [
-                'name' => $name,
+                'name_ru' => $name,
                 'description' => $description,
                 'duration_minutes' => 100,
                 'questions_count' => count($questions),
@@ -49,18 +49,18 @@ class StaticPsiho2Seeder extends Seeder
             ]
         );
 
-        $this->command->info('Экзамен: ' . $exam->name);
+        $this->command->info('Экзамен: ' . $exam->name_ru);
 
         if ($exam->questions()->count() === 0) {
             $this->importQuestions($exam, $questions);
         } else {
-            $this->command->warn('Вопросы для экзамена "' . $exam->name . '" уже существуют, пропускаем импорт.');
+            $this->command->warn('Вопросы для экзамена "' . $exam->name_ru . '" уже существуют, пропускаем импорт.');
         }
     }
 
     private function importQuestions(Exam $exam, array $questions): void
     {
-        $this->command->info("Импорт {$exam->name}: " . count($questions) . ' вопросов...');
+        $this->command->info("Импорт {$exam->name_ru}: " . count($questions) . ' вопросов...');
 
         $progressBar = $this->command->getOutput()->createProgressBar(count($questions));
         $progressBar->start();

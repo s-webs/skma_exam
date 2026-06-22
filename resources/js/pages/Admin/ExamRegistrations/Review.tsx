@@ -13,6 +13,7 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getLocalizedName, LocalizedNameFields } from '@/lib/localized-name';
 
 interface Applicant {
     id: number;
@@ -45,14 +46,12 @@ interface ReviewProps {
         } | null;
     };
     applicant: Applicant;
-    exam: {
+    exam: LocalizedNameFields & {
         id: number;
-        name: string;
         language: string;
     };
-    examType: {
+    examType: LocalizedNameFields & {
         id: number;
-        name: string;
     };
     canApprove: boolean;
     canUnapprove: boolean;
@@ -139,7 +138,7 @@ export default function Review({
                     <div className="mb-6">
                         <h2 className="text-3xl font-bold tracking-tight">{applicant.name}</h2>
                         <p className="text-muted-foreground mt-2">
-                            {examType.name} — {exam.name}
+                            {getLocalizedName(examType, 'ru')} — {getLocalizedName(exam, exam.language)}
                         </p>
                     </div>
 

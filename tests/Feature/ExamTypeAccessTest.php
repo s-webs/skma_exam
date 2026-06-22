@@ -25,14 +25,14 @@ beforeEach(function () {
     $this->registrator->assignRole('registrator');
 
     $this->examType = ExamType::create([
-        'name' => 'Access Test Type',
+        'name_ru' => 'Access Test Type',
         'slug' => 'access-test',
         'description' => null,
         'is_active' => true,
     ]);
 
     $this->otherExamType = ExamType::create([
-        'name' => 'Other Type',
+        'name_ru' => 'Other Type',
         'slug' => 'other-type',
         'description' => null,
         'is_active' => true,
@@ -40,7 +40,7 @@ beforeEach(function () {
 
     $this->exam = Exam::create([
         'exam_type_id' => $this->examType->id,
-        'name' => 'Access Exam',
+        'name_ru' => 'Access Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,
@@ -89,6 +89,7 @@ beforeEach(function () {
     $this->registration = ExamRegistration::create([
         'applicant_id' => $this->applicant->id,
         'exam_id' => $this->exam->id,
+        'date' => now()->toDateString(),
         'approved' => false,
     ]);
 });
@@ -108,7 +109,7 @@ test('developer can sync exam type access', function () {
 
     $response = $this->actingAs($this->developer)
         ->put(route('admin.exam-types.update', $this->examType), [
-            'name' => $this->examType->name,
+            'name_ru' => $this->examType->name_ru,
             'description' => null,
             'is_active' => true,
             'user_ids' => [$this->registrator->id],
@@ -207,7 +208,7 @@ test('registrator approve works for granted exam type', function () {
 test('registrator approve forbidden for ungranted exam type', function () {
     $otherExam = Exam::create([
         'exam_type_id' => $this->otherExamType->id,
-        'name' => 'Other Exam',
+        'name_ru' => 'Other Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,
@@ -314,7 +315,7 @@ test('bulk approve skips registrations without access', function () {
 
     $otherExam = Exam::create([
         'exam_type_id' => $this->otherExamType->id,
-        'name' => 'Other Exam',
+        'name_ru' => 'Other Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,

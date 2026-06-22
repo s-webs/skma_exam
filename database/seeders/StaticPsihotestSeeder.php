@@ -17,18 +17,18 @@ class StaticPsihotestSeeder extends Seeder
     {
         // Создаем тип экзамена
         $examType = ExamType::create([
-            'name' => 'Психотест (50 минут)',
+            'name_ru' => 'Психотест (50 минут)',
             'slug' => 'psixotest-50-minut',
             'description' => 'Психологическое тестирование для поступающих',
             'is_active' => true,
         ]);
 
-        $this->command->info('Тип экзамена: ' . $examType->name);
+        $this->command->info('Тип экзамена: ' . $examType->name_ru);
 
         // Создаем экзамен на русском языке
         $examRu = Exam::create([
             'exam_type_id' => $examType->id,
-            'name' => 'Русский',
+            'name_ru' => 'Русский',
             'description' => 'Психотест на русском языке',
             'language' => 'ru',
             'duration_minutes' => 50,
@@ -39,12 +39,12 @@ class StaticPsihotestSeeder extends Seeder
             'created_by_user_id' => 1,
         ]);
 
-        $this->command->info('Экзамен: ' . $examRu->name);
+        $this->command->info('Экзамен: ' . $examRu->name_ru);
 
         // Создаем экзамен на казахском языке
         $examKz = Exam::create([
             'exam_type_id' => $examType->id,
-            'name' => 'Қазақша',
+            'name_ru' => 'Қазақша',
             'description' => 'Психотест на казахском языке',
             'language' => 'kz',
             'duration_minutes' => 50,
@@ -55,7 +55,7 @@ class StaticPsihotestSeeder extends Seeder
             'created_by_user_id' => 1,
         ]);
 
-        $this->command->info('Экзамен: ' . $examKz->name);
+        $this->command->info('Экзамен: ' . $examKz->name_ru);
 
         // Импортируем вопросы для русского экзамена
         $this->importQuestions($examRu, $this->getQuestionsRu());
@@ -71,7 +71,7 @@ class StaticPsihotestSeeder extends Seeder
      */
     private function importQuestions(Exam $exam, array $questions): void
     {
-        $this->command->info("Импорт {$exam->name}: " . count($questions) . " вопросов...");
+        $this->command->info("Импорт {$exam->name_ru}: " . count($questions) . " вопросов...");
 
         $progressBar = $this->command->getOutput()->createProgressBar(count($questions));
         $progressBar->start();

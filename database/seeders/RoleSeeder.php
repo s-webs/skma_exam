@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Support\PermissionRegistry;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleSeeder extends Seeder
 {
@@ -13,71 +15,24 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create roles
-        $developer = Role::firstOrCreate(['name' => 'developer', 'guard_name' => 'web']);
-        $ktbo = Role::firstOrCreate(['name' => 'ktbo', 'guard_name' => 'web']);
-        $registrator = Role::firstOrCreate(['name' => 'registrator', 'guard_name' => 'web']);
-
-        // Create permissions
-        $permissions = [
-            // User management (only developer)
-            'manage users',
-            'create users',
-            'edit users',
-            'delete users',
-
-            // Applicant management
-            'view applicants',
-            'approve applicants',
-            'manage exam attempts',
-
-            // Question management
-            'manage questions',
-            'create questions',
-            'edit questions',
-            'delete questions',
-
-            // Results
-            'view results',
-            'export results',
-
-            // System
-            'access admin panel',
-        ];
-
-        foreach ($permissions as $permission) {
+        foreach (PermissionRegistry::all() as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
-        // Assign permissions to roles
+        foreach (config('permissions.default_roles', []) as $roleName => $permissions) {
+            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
 
-        // Developer: full access
-        $developer->givePermissionTo(Permission::all());
+            $assigned = $permissions === '*'
+                ? PermissionRegistry::all()
+                : $permissions;
 
-        // KTBO: manage applicants, exams, questions, view results
-        $ktbo->givePermissionTo([
-            'view applicants',
-            'approve applicants',
-            'manage exam attempts',
-            'manage questions',
-            'create questions',
-            'edit questions',
-            'delete questions',
-            'view results',
-            'export results',
-            'access admin panel',
-        ]);
+            $role->syncPermissions($assigned);
+        }
 
-        // Registrator: view applicants and approve within assigned exam types
-        $registrator->givePermissionTo([
-            'view applicants',
-            'approve applicants',
-            'access admin panel',
-        ]);
-
-        $this->command->info('Roles and permissions created successfully!');
+        if ($this->command !== null) {
+            $this->command->info('Roles and permissions created successfully!');
+        }
     }
 }

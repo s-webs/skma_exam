@@ -106,11 +106,16 @@ export default function Index({ users }: UsersIndexProps) {
                                                 <TableCell className="font-medium">{user.name}</TableCell>
                                                 <TableCell>{user.email}</TableCell>
                                                 <TableCell>
-                                                    <Badge
-                                                        className={getRoleBadgeColor(user.roles[0]?.name)}
-                                                    >
-                                                        {t(`users.${user.roles[0]?.name}`) || user.roles[0]?.name}
-                                                    </Badge>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {user.roles.map((role) => (
+                                                            <Badge
+                                                                key={role.name}
+                                                                className={getRoleBadgeColor(role.name)}
+                                                            >
+                                                                {t(`users.${role.name}`, { defaultValue: role.name })}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     {new Date(user.created_at).toLocaleDateString()}

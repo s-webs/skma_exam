@@ -120,6 +120,7 @@ class RegistrationController extends Controller
         ExamRegistration::create([
             'applicant_id' => $applicant->id,
             'exam_id' => $validated['exam_id'],
+            'date' => now()->toDateString(),
         ]);
 
         $registrationTelegram->clearSession($request);
@@ -185,6 +186,7 @@ class RegistrationController extends Controller
         ExamRegistration::create([
             'applicant_id' => $applicant->id,
             'exam_id' => $validated['exam_id'],
+            'date' => now()->toDateString(),
         ]);
 
         $registrationEmail->clearSession($request);

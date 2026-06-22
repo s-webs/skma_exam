@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->admin->assignRole('ktbo');
 
     $this->examType = ExamType::create([
-        'name' => 'Email Reg Type',
+        'name_ru' => 'Email Reg Type',
         'slug' => 'email-reg',
         'description' => null,
         'is_active' => true,
@@ -32,7 +32,7 @@ beforeEach(function () {
 
     $this->exam = Exam::create([
         'exam_type_id' => $this->examType->id,
-        'name' => 'Email Exam',
+        'name_ru' => 'Email Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,
@@ -142,6 +142,7 @@ test('registration store works with verified email session', function () {
 
     $this->assertDatabaseHas('exam_registrations', [
         'exam_id' => $this->exam->id,
+        'date' => now()->toDateString(),
     ]);
 });
 

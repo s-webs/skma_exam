@@ -155,7 +155,7 @@ class TelegramService
         ExamResultPdfService $pdfService
     ): bool {
         $attempt->loadMissing(['exam']);
-        $examName = $attempt->exam->name;
+        $examName = $attempt->exam->localizedName($attempt->exam->language);
         $pdfUrl = $pdfService->publicUrl($attempt);
 
         $messageSent = $this->sendExamResultsMessage(
@@ -228,7 +228,7 @@ class TelegramService
             file_put_contents($tempPath, $pdfService->render($attempt));
 
             app()->setLocale($this->normalizeLocale($attempt->exam->language ?? 'ru'));
-            $caption = __('exam_report.exam_result').': '.$attempt->exam->name."\n";
+            $caption = __('exam_report.exam_result').': '.$attempt->exam->localizedName($attempt->exam->language)."\n";
             $caption .= __('exam_report.result').': '.$result->total_score.' — ';
             $caption .= $result->passed ? __('exam_report.passed') : __('exam_report.failed');
 

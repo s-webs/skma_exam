@@ -77,7 +77,7 @@ class ExamAttemptController extends Controller
                 'started_at' => $attempt->started_at?->toIso8601String(),
             ],
             'exam' => [
-                'name' => $attempt->exam->name,
+                'name' => $attempt->exam->localizedName($attempt->exam->language),
                 'duration_minutes' => $attempt->exam->duration_minutes,
             ],
             'questions' => $this->examAttemptService->buildQuestionsPayload($attempt),
@@ -131,7 +131,7 @@ class ExamAttemptController extends Controller
 
                     try {
                         Mail::to($applicant->email)->send(new ExamResultMail(
-                            $exam->name,
+                            $exam->localizedName($exam->language),
                             $result->total_score,
                             $result->passed,
                             $this->examResultPdfService->publicUrl($attempt),
@@ -175,7 +175,7 @@ class ExamAttemptController extends Controller
 
         return Inertia::render('Public/Exam/Complete', [
             'exam' => [
-                'name' => $attempt->exam->name,
+                'name' => $attempt->exam->localizedName($attempt->exam->language),
             ],
             'reportUrl' => $this->examResultPdfService->publicUrl($attempt),
             'resultsDeliveryMethod' => $attempt->exam->require_telegram_verification ? 'telegram' : 'email',
@@ -201,7 +201,7 @@ class ExamAttemptController extends Controller
                 'status' => $attempt->status,
             ],
             'exam' => [
-                'name' => $attempt->exam->name,
+                'name' => $attempt->exam->localizedName($attempt->exam->language),
                 'description' => $attempt->exam->description,
                 'duration_minutes' => $attempt->exam->duration_minutes,
                 'questions_count' => $attempt->exam->questions_count,
@@ -219,7 +219,7 @@ class ExamAttemptController extends Controller
     {
         return [
             'exam' => [
-                'name' => $attempt->exam->name,
+                'name' => $attempt->exam->localizedName($attempt->exam->language),
             ],
             'attempt' => [
                 'token' => $attempt->token,

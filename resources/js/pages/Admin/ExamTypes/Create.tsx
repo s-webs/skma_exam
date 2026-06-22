@@ -4,16 +4,18 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { LocalizedNameFields } from '@/components/localized-name-fields';
 
 export default function Create() {
     const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
-        name: '',
+        name_ru: '',
+        name_kk: '',
+        name_en: '',
         description: '',
         is_active: true,
     });
@@ -47,21 +49,13 @@ export default function Create() {
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={submit} className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">{t('examTypes.name')}</Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        required
-                                        autoFocus
-                                        placeholder={t('examTypes.namePlaceholder')}
-                                    />
-                                    {errors.name && (
-                                        <p className="text-sm text-red-600">{errors.name}</p>
-                                    )}
-                                </div>
+                                <LocalizedNameFields
+                                    values={data}
+                                    onChange={(field, value) => setData(field, value)}
+                                    errors={errors}
+                                    idPrefix="exam-type"
+                                    autoFocus
+                                />
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">{t('examTypes.descriptionLabel')}</Label>

@@ -13,17 +13,22 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { AdminLocalizedName } from '@/components/admin-localized-name';
 import { RegistrationLinkDialog } from '@/components/registration-link-dialog';
 
 interface Exam {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
     language: string;
 }
 
 interface ExamType {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
     slug: string;
     description: string | null;
     is_active: boolean;
@@ -118,7 +123,7 @@ export default function Index({ examTypes }: ExamTypesIndexProps) {
                                                         href={route('admin.exam-types.show', examType.id)}
                                                         className="hover:underline"
                                                     >
-                                                        {examType.name}
+                                                        <AdminLocalizedName names={examType} />
                                                     </Link>
                                                 </TableCell>
                                                 <TableCell className="max-w-md truncate">

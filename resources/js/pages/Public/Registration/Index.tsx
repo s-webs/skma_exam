@@ -82,16 +82,16 @@ async function registrationJson<T>(
     return { ok: true, data: body as T };
 }
 
-interface Exam {
+import { getLocalizedName, LocalizedNameFields } from '@/lib/localized-name';
+
+interface Exam extends LocalizedNameFields {
     id: number;
-    name: string;
     language: string;
     require_telegram_verification: boolean;
 }
 
-interface ExamType {
+interface ExamType extends LocalizedNameFields {
     id: number;
-    name: string;
     slug: string;
     description: string | null;
     exams: Exam[];
@@ -103,7 +103,7 @@ interface RegistrationIndexProps {
 }
 
 export default function Index({ examType, telegramBotUsername }: RegistrationIndexProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [selectedExam, setSelectedExam] = useState<number | null>(null);
     const [currentStep, setCurrentStep] = useState<RegistrationStep>('exam');
     const [telegramBotUrl, setTelegramBotUrl] = useState<string | null>(null);
@@ -654,27 +654,29 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
     return (
         <>
-            <Head title={`${t('publicRegistration.pageTitle')} - ${examType.name}`} />
+            <Head title={`${t('publicRegistration.pageTitle')} - ${getLocalizedName(examType, i18n.language)}`} />
 
             <div className="min-h-screen bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700">
                 {/* Header */}
                 <div className="bg-white/10 backdrop-blur-md border-b border-white/20">
                     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                                     <GraduationCap className="h-6 w-6 text-white" />
                                 </div>
-                                <div>
-                                    <h1 className="text-xl sm:text-2xl font-bold text-white">
-                                        {examType.name}
+                                <div className="min-w-0">
+                                    <h1 className="text-xl font-bold text-white sm:text-2xl">
+                                        {getLocalizedName(examType, i18n.language)}
                                     </h1>
                                     {examType.description && (
                                         <p className="text-sm text-white/80">{examType.description}</p>
                                     )}
                                 </div>
                             </div>
-                            <LanguageSwitcher />
+                            <div className="flex w-full justify-center sm:w-auto sm:ml-auto">
+                                <LanguageSwitcher />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -692,7 +694,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                     <div key={step.id} className="flex items-center">
                                         <div className="flex flex-col items-center">
                                             <div
-                                                className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full transition-all ${
+                                                className={`flex h-9 w-9 sm:h-14 sm:w-14 items-center justify-center rounded-full transition-all ${
                                                     isCompleted
                                                         ? 'bg-green-500 text-white'
                                                         : isActive
@@ -701,16 +703,16 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 }`}
                                             >
                                                 {isCompleted ? (
-                                                    <CheckCircle2 className="h-6 w-6 sm:h-7 sm:w-7" />
+                                                    <CheckCircle2 className="h-4 w-4 sm:h-7 sm:w-7" />
                                                 ) : (
-                                                    <Icon className="h-6 w-6 sm:h-7 sm:w-7" />
+                                                    <Icon className="h-4 w-4 sm:h-7 sm:w-7" />
                                                 )}
                                             </div>
                                         </div>
                                         {index < steps.length - 1 && (
-                                            <div className="flex items-center mx-3 sm:mx-4">
+                                            <div className="flex items-center mx-1.5 sm:mx-4">
                                                 <ChevronRight
-                                                    className={`h-6 w-6 sm:h-8 sm:w-8 transition-all ${
+                                                    className={`h-4 w-4 sm:h-8 sm:w-8 transition-all ${
                                                         isCompleted ? 'text-green-500' : 'text-white/30'
                                                     }`}
                                                 />
@@ -752,7 +754,9 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                     >
                                                         <RadioGroupItem value={exam.id.toString()} id={`exam-${exam.id}`} />
                                                         <div className="flex-1">
-                                                            <p className="font-semibold text-gray-900">{exam.name}</p>
+                                                            <p className="font-semibold text-gray-900">
+                                                                {getLocalizedName(exam, exam.language)}
+                                                            </p>
                                                         </div>
                                                     </label>
                                                 ))}

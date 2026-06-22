@@ -55,11 +55,13 @@ export function useBulkApproval(rows: BulkApprovalRow[]) {
 
     return {
         selected,
+        setSelected,
         pendingIds,
         allPendingSelected,
         selectedPendingCount,
         toggle,
         toggleAllPending,
         bulkApprove,
+        clearSelection: () => setSelected([]),
     };
 }

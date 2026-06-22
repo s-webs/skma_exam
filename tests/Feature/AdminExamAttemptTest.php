@@ -16,7 +16,7 @@ beforeEach(function () {
     $this->admin->assignRole('ktbo');
 
     $examType = ExamType::create([
-        'name' => 'Test Type',
+        'name_ru' => 'Test Type',
         'slug' => 'admin-attempt-test',
         'description' => null,
         'is_active' => true,
@@ -26,7 +26,7 @@ beforeEach(function () {
 
     $this->exam = Exam::create([
         'exam_type_id' => $examType->id,
-        'name' => 'Test Exam',
+        'name_ru' => 'Test Exam',
         'description' => null,
         'language' => 'ru',
         'duration_minutes' => 45,

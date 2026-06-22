@@ -10,12 +10,14 @@ class ExamRegistration extends Model
     protected $fillable = [
         'applicant_id',
         'exam_id',
+        'date',
         'approved',
         'approved_at',
         'approved_by',
     ];
 
     protected $casts = [
+        'date' => 'date',
         'approved' => 'boolean',
         'approved_at' => 'datetime',
     ];

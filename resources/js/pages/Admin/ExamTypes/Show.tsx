@@ -5,7 +5,9 @@ import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AdminLocalizedName } from '@/components/admin-localized-name';
 import { RegistrationLinkDialog } from '@/components/registration-link-dialog';
+import { getLocalizedName } from '@/lib/localized-name';
 import {
     Table,
     TableBody,
@@ -17,7 +19,9 @@ import {
 
 interface Exam {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
     language: string;
     is_active: boolean;
     questions_count: number;
@@ -25,7 +29,9 @@ interface Exam {
 
 interface ExamType {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
     slug: string;
     description: string | null;
     is_active: boolean;
@@ -50,7 +56,7 @@ export default function Show({ examType }: ShowProps) {
 
     return (
         <AppLayout>
-            <Head title={examType.name} />
+            <Head title={examType.name_ru} />
 
             <div className="py-12">
                 <div className="mx-auto max-w-5xl sm:px-6 lg:px-8">
@@ -82,7 +88,9 @@ export default function Show({ examType }: ShowProps) {
                     <Card className="mb-6">
                         <CardHeader>
                             <div className="flex items-center justify-between">
-                                <CardTitle>{examType.name}</CardTitle>
+                                <CardTitle>
+                                    <AdminLocalizedName names={examType} />
+                                </CardTitle>
                                 <Badge
                                     className={
                                         examType.is_active
@@ -125,7 +133,9 @@ export default function Show({ examType }: ShowProps) {
                                     ) : (
                                         examType.exams.map((exam) => (
                                             <TableRow key={exam.id}>
-                                                <TableCell className="font-medium">{exam.name}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    {getLocalizedName(exam, exam.language)}
+                                                </TableCell>
                                                 <TableCell>{exam.language}</TableCell>
                                                 <TableCell>{exam.questions_count}</TableCell>
                                                 <TableCell>

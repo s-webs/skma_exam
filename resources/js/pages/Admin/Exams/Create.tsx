@@ -16,10 +16,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { LocalizedNameFields } from '@/components/localized-name-fields';
 
 interface ExamType {
     id: number;
-    name: string;
+    name_ru: string;
+    name_kk?: string | null;
+    name_en?: string | null;
 }
 
 interface CreateProps {
@@ -30,7 +33,9 @@ export default function Create({ examTypes }: CreateProps) {
     const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         exam_type_id: '',
-        name: '',
+        name_ru: '',
+        name_kk: '',
+        name_en: '',
         description: '',
         language: 'ru',
         duration_minutes: 50,
@@ -82,7 +87,7 @@ export default function Create({ examTypes }: CreateProps) {
                                         <SelectContent>
                                             {examTypes.map((type) => (
                                                 <SelectItem key={type.id} value={type.id.toString()}>
-                                                    {type.name}
+                                                    {type.name_ru}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -92,20 +97,12 @@ export default function Create({ examTypes }: CreateProps) {
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">{t('exams.examName')}</Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        required
-                                        placeholder={t('exams.examNamePlaceholder')}
-                                    />
-                                    {errors.name && (
-                                        <p className="text-sm text-red-600">{errors.name}</p>
-                                    )}
-                                </div>
+                                <LocalizedNameFields
+                                    values={data}
+                                    onChange={(field, value) => setData(field, value)}
+                                    errors={errors}
+                                    idPrefix="exam"
+                                />
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">{t('exams.descriptionLabel')}</Label>

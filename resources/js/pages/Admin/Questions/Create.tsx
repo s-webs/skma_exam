@@ -11,9 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
-interface Exam {
+import { getLocalizedName, LocalizedNameFields } from '@/lib/localized-name';
+
+interface Exam extends LocalizedNameFields {
     id: number;
-    name: string;
+    language?: string;
 }
 
 interface Answer {
@@ -121,7 +123,7 @@ export default function Create({ exam }: CreateProps) {
                         <CardHeader>
                             <CardTitle>{t('questions.createTitle')}</CardTitle>
                             <CardDescription>
-                                {t('questions.createDescription', { name: exam.name })}
+                                {t('questions.createDescription', { name: getLocalizedName(exam, exam.language ?? 'ru') })}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

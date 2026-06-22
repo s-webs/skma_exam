@@ -2,7 +2,7 @@
 
 return [
     'title' => 'Лист результатов экзамена',
-    'based_on' => 'На основании: ID :id от :date г.',
+    'based_on' => 'ID :id от :date г.',
     'full_name' => 'ФИО',
     'exam_result' => 'Результат экзамена',
     'exam' => 'Экзамен',
@@ -13,8 +13,8 @@ return [
     'subject' => 'Предмет',
     'points' => 'Баллы',
     'result' => 'Итог',
-    'passed' => 'Сдан',
-    'failed' => 'Не сдан',
+    'passed' => 'Допуск',
+    'failed' => 'Недопуск',
     'status' => 'Статус',
     'scan_hint' => 'Сканируйте QR для открытия отчёта',
     'pdf_link' => 'Ссылка на PDF',

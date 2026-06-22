@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLocalizedNames;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Exam extends Model
 {
+    use HasLocalizedNames;
+
     protected $fillable = [
         'exam_type_id',
-        'name',
+        'name_ru',
+        'name_kk',
+        'name_en',
         'description',
         'language',
         'duration_minutes',
