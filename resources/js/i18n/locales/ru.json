@@ -169,6 +169,7 @@
       "exam-registrations.approve": "Одобрение регистраций",
       "exam-registrations.unapprove": "Отмена одобрения",
       "exam-registrations.edit-date": "Изменение даты регистрации",
+      "exam-registrations.delete": "Удаление регистраций",
       "exam-attempts.delete": "Удаление попыток"
     }
   },
@@ -288,6 +289,9 @@
     "approve": "Одобрить",
     "unapprove": "Отменить одобрение",
     "deleteConfirm": "Вы уверены, что хотите удалить этого абитуриента?",
+    "deleteRegistrationConfirm": "Вы уверены, что хотите удалить эту заявку? Связанные попытки и результаты также будут удалены.",
+    "deleteRegistration": "Удалить заявку",
+    "deleteAttempt": "Удалить попытку",
     "unapproveConfirm": "Вы уверены, что хотите отменить одобрение?",
     "russian": "Русский",
     "kazakh": "Казахский",

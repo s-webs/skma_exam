@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Calendar, CheckCircle, XCircle, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle, XCircle, Eye, Trash2, FileX } from 'lucide-react';
 import { router } from '@inertiajs/react';
 import { useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
@@ -80,6 +80,7 @@ export default function Applicants({ exam, registrations, rows }: ApplicantsProp
     const canEditDate = can('exam-registrations.edit-date');
     const canViewRegistration = can('exam-registrations.view');
     const canDeleteAttempt = can('exam-attempts.delete');
+    const canDeleteRegistration = can('exam-registrations.delete');
     const showCheckboxColumn = canApprove || canEditDate;
     const {
         selected,
@@ -122,8 +123,14 @@ export default function Applicants({ exam, registrations, rows }: ApplicantsProp
     };
 
     const handleDeleteAttempt = (attemptId: number) => {
-        if (confirm('Вы уверены, что хотите удалить эту попытку?')) {
+        if (confirm(t('applicants.deleteAttempt') + '?')) {
             router.delete(route('admin.exam-attempts.destroy', attemptId));
+        }
+    };
+
+    const handleDeleteRegistration = (registrationId: number) => {
+        if (confirm(t('applicants.deleteRegistrationConfirm'))) {
+            router.delete(route('admin.exam-registrations.destroy', registrationId));
         }
     };
 
@@ -371,12 +378,22 @@ export default function Applicants({ exam, registrations, rows }: ApplicantsProp
                                                                     </Button>
                                                                 </Link>
                                                             )}
+                                                            {canDeleteRegistration && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteRegistration(row.registration_id)}
+                                                                    title={t('applicants.deleteRegistration')}
+                                                                >
+                                                                    <FileX className="h-4 w-4 text-red-600" />
+                                                                </Button>
+                                                            )}
                                                             {canDeleteAttempt && row.attempt_id !== null && (
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
                                                                     onClick={() => handleDeleteAttempt(row.attempt_id!)}
-                                                                    title="Удалить попытку"
+                                                                    title={t('applicants.deleteAttempt')}
                                                                 >
                                                                     <Trash2 className="h-4 w-4 text-red-600" />
                                                                 </Button>

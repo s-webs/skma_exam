@@ -169,6 +169,7 @@
       "exam-registrations.approve": "Тіркелуді бекіту",
       "exam-registrations.unapprove": "Бекітуді болдырмау",
       "exam-registrations.edit-date": "Тіркелу күнін өзгерту",
+      "exam-registrations.delete": "Тіркелулерді жою",
       "exam-attempts.delete": "Әрекетті жою"
     }
   },
@@ -288,6 +289,9 @@
     "approve": "Бекіту",
     "unapprove": "Бекітуді болдырмау",
     "deleteConfirm": "Бұл түлекті жоюға сенімдісіз бе?",
+    "deleteRegistrationConfirm": "Бұл өтінішті жоюға сенімдісіз бе? Байланысты тапсырулар мен нәтижелер де жойылады.",
+    "deleteRegistration": "Өтінішті жою",
+    "deleteAttempt": "Тапсыруды жою",
     "unapproveConfirm": "Бекітуді болдырмауға сенімдісіз бе?",
     "russian": "Орыс",
     "kazakh": "Қазақ",

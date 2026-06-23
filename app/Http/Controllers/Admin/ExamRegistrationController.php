@@ -55,6 +55,7 @@ class ExamRegistrationController extends Controller
             'canApprove' => ! $examRegistration->approved
                 && $this->authorization->can($user, 'exam-registrations.approve', $examRegistration->exam->examType),
             'canUnapprove' => $canUnapprove && $examRegistration->approved,
+            'canDelete' => $this->authorization->can($user, 'exam-registrations.delete', $examRegistration->exam->examType),
             'backUrl' => $this->resolveReviewBackUrl($request, $examRegistration),
         ]);
     }
@@ -147,6 +148,18 @@ class ExamRegistrationController extends Controller
         ]);
 
         return back()->with('success', 'Одобрение записи на экзамен отменено');
+    }
+
+    public function destroy(ExamRegistration $examRegistration)
+    {
+        $this->authorization->ensureCanAccessRegistration(auth()->user(), 'exam-registrations.delete', $examRegistration);
+
+        DB::transaction(function () use ($examRegistration) {
+            $examRegistration->examAttempts()->each(fn ($attempt) => $attempt->delete());
+            $examRegistration->delete();
+        });
+
+        return back()->with('success', 'Заявка на экзамен удалена.');
     }
 
     public function updateDate(Request $request, ExamRegistration $examRegistration)

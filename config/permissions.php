@@ -82,6 +82,7 @@ return [
                 'exam-registrations.approve',
                 'exam-registrations.unapprove',
                 'exam-registrations.edit-date',
+                'exam-registrations.delete',
             ],
         ],
         'exam-attempts' => [

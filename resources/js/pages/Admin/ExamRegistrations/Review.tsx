@@ -3,6 +3,7 @@ import {
     ArrowLeft,
     Calendar,
     CheckCircle,
+    FileX,
     GraduationCap,
     Languages,
     Mail,
@@ -10,6 +11,7 @@ import {
     Phone,
     XCircle,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +57,7 @@ interface ReviewProps {
     };
     canApprove: boolean;
     canUnapprove: boolean;
+    canDelete: boolean;
     backUrl: string;
 }
 
@@ -65,8 +68,10 @@ export default function Review({
     examType,
     canApprove,
     canUnapprove,
+    canDelete,
     backUrl,
 }: ReviewProps) {
+    const { t } = useTranslation();
     const { errors, flash } = usePage<{
         errors: { approve?: string };
         flash: { success?: string };
@@ -90,6 +95,12 @@ export default function Review({
     const handleUnapprove = () => {
         if (confirm('Вы уверены, что хотите отменить одобрение?')) {
             router.post(route('admin.exam-registrations.unapprove', registration.id));
+        }
+    };
+
+    const handleDelete = () => {
+        if (confirm(t('applicants.deleteRegistrationConfirm'))) {
+            router.delete(route('admin.exam-registrations.destroy', registration.id));
         }
     };
 
@@ -118,6 +129,12 @@ export default function Review({
                                 <Button variant="outline" onClick={handleUnapprove}>
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Отменить одобрение
+                                </Button>
+                            )}
+                            {canDelete && (
+                                <Button variant="destructive" onClick={handleDelete}>
+                                    <FileX className="mr-2 h-4 w-4" />
+                                    {t('applicants.deleteRegistration')}
                                 </Button>
                             )}
                         </div>

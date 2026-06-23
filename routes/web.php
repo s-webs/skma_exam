@@ -155,6 +155,9 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::patch('exam-registrations/{examRegistration}/date', [ExamRegistrationController::class, 'updateDate'])->name('exam-registrations.update-date');
         Route::post('exam-registrations/bulk-update-date', [ExamRegistrationController::class, 'bulkUpdateDate'])->name('exam-registrations.bulk-update-date');
     });
+    Route::middleware(['permission:exam-registrations.delete'])->group(function () {
+        Route::delete('exam-registrations/{examRegistration}', [ExamRegistrationController::class, 'destroy'])->name('exam-registrations.destroy');
+    });
 
     // Exam type edit + exam/question management
     Route::middleware(['permission:exam-types.edit'])->group(function () {

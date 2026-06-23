@@ -169,6 +169,7 @@
       "exam-registrations.approve": "Approve registrations",
       "exam-registrations.unapprove": "Unapprove registrations",
       "exam-registrations.edit-date": "Edit registration date",
+      "exam-registrations.delete": "Delete registrations",
       "exam-attempts.delete": "Delete attempts"
     }
   },
@@ -288,6 +289,9 @@
     "approve": "Approve",
     "unapprove": "Cancel Approval",
     "deleteConfirm": "Are you sure you want to delete this applicant?",
+    "deleteRegistrationConfirm": "Are you sure you want to delete this registration? Related attempts and results will also be deleted.",
+    "deleteRegistration": "Delete registration",
+    "deleteAttempt": "Delete attempt",
     "unapproveConfirm": "Are you sure you want to cancel approval?",
     "russian": "Russian",
     "kazakh": "Kazakh",
