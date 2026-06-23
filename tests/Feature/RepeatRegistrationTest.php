@@ -85,6 +85,10 @@ function submitEmailRegistration($test, ExamType $examType, Exam $exam, array $p
 
     $token = seedRepeatEmailDraft($examType->slug, $exam, $existingApplicantId, $personal);
 
+    if ($existingApplicantId === null) {
+        $payload = array_merge($payload, registrationDocumentFiles());
+    }
+
     $test->withSession([
         RegistrationEmailService::SESSION_TOKEN_KEY => $token,
         RegistrationEmailService::SESSION_VERIFIED_KEY => true,

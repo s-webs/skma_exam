@@ -19,7 +19,7 @@ class ExamAttemptService
     {
         return ExamAttempt::query()
             ->where('token', $token)
-            ->with(['exam', 'applicant', 'examRegistration'])
+            ->with(['exam.examType', 'applicant', 'examRegistration'])
             ->firstOrFail();
     }
 

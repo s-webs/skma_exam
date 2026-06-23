@@ -129,8 +129,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         | 'document_front'
         | 'document_back'
         | 'diplom'
-        | 'certificate'
-        | 'photo';
+        | 'certificate';
 
     const handleDocumentFile = async (field: DocumentField, file: File | null) => {
         if (!file) {
@@ -163,7 +162,6 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
         document_back: null as File | null,
         diplom: null as File | null,
         certificate: null as File | null,
-        photo: null as File | null,
     });
 
     const handleExamSelect = (examId: string) => {
@@ -184,6 +182,11 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
     const canProceedToVerification = data.name && data.email && data.identifier && data.phone && data.address;
     const canProceedToEducation = telegramVerified;
     const canProceedToDocuments = data.graduate_organization && data.graduate_year && data.speciality;
+    const canSubmitDocuments =
+        data.document_front !== null &&
+        data.document_back !== null &&
+        data.diplom !== null &&
+        data.certificate !== null;
 
     const resetTelegramSessionOnServer = useCallback(async () => {
         await registrationJson(route('public.registration.telegram.reset', examType.slug), {
@@ -1341,11 +1344,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
 
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div className="space-y-2">
-                                                <Label htmlFor="document_front">{t('publicRegistration.documents.documentFront')}</Label>
+                                                <Label htmlFor="document_front">{t('publicRegistration.documents.documentFront')} *</Label>
                                                 <Input
                                                     id="document_front"
                                                     type="file"
                                                     accept="image/*"
+                                                    required
                                                     disabled={compressingField === 'document_front'}
                                                     onChange={(e) =>
                                                         void handleDocumentFile(
@@ -1364,11 +1368,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="document_back">{t('publicRegistration.documents.documentBack')}</Label>
+                                                <Label htmlFor="document_back">{t('publicRegistration.documents.documentBack')} *</Label>
                                                 <Input
                                                     id="document_back"
                                                     type="file"
                                                     accept="image/*"
+                                                    required
                                                     disabled={compressingField === 'document_back'}
                                                     onChange={(e) =>
                                                         void handleDocumentFile(
@@ -1387,11 +1392,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="diplom">{t('publicRegistration.documents.diplom')}</Label>
+                                                <Label htmlFor="diplom">{t('publicRegistration.documents.diplom')} *</Label>
                                                 <Input
                                                     id="diplom"
                                                     type="file"
                                                     accept="image/*"
+                                                    required
                                                     disabled={compressingField === 'diplom'}
                                                     onChange={(e) =>
                                                         void handleDocumentFile('diplom', e.target.files?.[0] || null)
@@ -1407,11 +1413,12 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="certificate">{t('publicRegistration.documents.certificate')}</Label>
+                                                <Label htmlFor="certificate">{t('publicRegistration.documents.certificate')} *</Label>
                                                 <Input
                                                     id="certificate"
                                                     type="file"
                                                     accept="image/*"
+                                                    required
                                                     disabled={compressingField === 'certificate'}
                                                     onChange={(e) =>
                                                         void handleDocumentFile(
@@ -1426,26 +1433,6 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                                 )}
                                                 {errors.certificate && (
                                                     <p className="text-sm text-red-600">{errors.certificate}</p>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="photo">{t('publicRegistration.documents.photo')}</Label>
-                                                <Input
-                                                    id="photo"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    disabled={compressingField === 'photo'}
-                                                    onChange={(e) =>
-                                                        void handleDocumentFile('photo', e.target.files?.[0] || null)
-                                                    }
-                                                    className="h-12"
-                                                />
-                                                {compressingField === 'photo' && (
-                                                    <p className="text-xs text-gray-500">{t('publicRegistration.documents.compressing')}</p>
-                                                )}
-                                                {errors.photo && (
-                                                    <p className="text-sm text-red-600">{errors.photo}</p>
                                                 )}
                                             </div>
                                         </div>
@@ -1472,7 +1459,7 @@ export default function Index({ examType, telegramBotUsername }: RegistrationInd
                                             </Button>
                                             <Button
                                                 type="submit"
-                                                disabled={processing || compressingField !== null}
+                                                disabled={!canSubmitDocuments || processing || compressingField !== null}
                                                 className="flex-1"
                                                 size="lg"
                                             >

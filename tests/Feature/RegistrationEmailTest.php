@@ -131,6 +131,7 @@ test('registration store works with verified email session', function () {
         'graduate_organization' => 'University',
         'graduate_year' => '2020',
         'speciality' => 'IT',
+        ...registrationDocumentFiles(),
     ]);
 
     $response->assertOk();
@@ -166,6 +167,36 @@ test('registration store rejects telegram session when email exam selected', fun
     ]);
 
     $response->assertSessionHasErrors('email');
+});
+
+test('registration store requires documents for new applicants', function () {
+    $personal = [
+        'name' => 'Email User',
+        'email' => 'nodocs@example.com',
+        'identifier' => '555555555555',
+        'address' => 'Address',
+        'phone' => '77001112233',
+    ];
+
+    $token = seedVerifiedEmailDraft($this->examType->slug, $this->exam, null, $personal);
+
+    $response = $this->withSession([
+        RegistrationEmailService::SESSION_TOKEN_KEY => $token,
+        RegistrationEmailService::SESSION_VERIFIED_KEY => true,
+    ])->post(route('public.registration.store', $this->examType->slug), [
+        'exam_id' => $this->exam->id,
+        ...$personal,
+        'graduate_organization' => 'University',
+        'graduate_year' => '2020',
+        'speciality' => 'IT',
+    ]);
+
+    $response->assertSessionHasErrors([
+        'document_front',
+        'document_back',
+        'diplom',
+        'certificate',
+    ]);
 });
 
 test('approve without telegram sends exam invite email', function () {

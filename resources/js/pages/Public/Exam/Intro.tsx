@@ -8,14 +8,14 @@ interface IntroProps {
     attempt: { token: string; status: string };
     exam: {
         name: string;
-        description: string | null;
         duration_minutes: number;
         questions_count: number;
     };
+    exam_type_name: string;
     applicant: { name: string };
 }
 
-export default function Intro({ attempt, exam, applicant }: IntroProps) {
+export default function Intro({ attempt, exam, exam_type_name, applicant }: IntroProps) {
     const start = (e: FormEvent) => {
         e.preventDefault();
         router.post(route('public.exam.start', attempt.token));
@@ -36,8 +36,8 @@ export default function Intro({ attempt, exam, applicant }: IntroProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {exam.description && (
-                                <p className="text-sm text-muted-foreground text-center">{exam.description}</p>
+                            {exam_type_name && (
+                                <p className="text-sm text-muted-foreground text-center">{exam_type_name}</p>
                             )}
 
                             <ul className="space-y-3 rounded-xl bg-indigo-50 p-4 text-sm text-indigo-900">

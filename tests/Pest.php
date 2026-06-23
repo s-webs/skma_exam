@@ -41,7 +41,12 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function registrationDocumentFiles(): array
 {
-    // ..
+    return [
+        'document_front' => \Illuminate\Http\UploadedFile::fake()->image('front.jpg'),
+        'document_back' => \Illuminate\Http\UploadedFile::fake()->image('back.jpg'),
+        'diplom' => \Illuminate\Http\UploadedFile::fake()->image('diplom.jpg'),
+        'certificate' => \Illuminate\Http\UploadedFile::fake()->image('certificate.jpg'),
+    ];
 }

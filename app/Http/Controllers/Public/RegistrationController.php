@@ -48,11 +48,6 @@ class RegistrationController extends Controller
             'graduate_organization' => 'required|string',
             'graduate_year' => 'required|string',
             'speciality' => 'required|string',
-            'document_front' => 'nullable|image|max:2048',
-            'document_back' => 'nullable|image|max:2048',
-            'diplom' => 'nullable|image|max:2048',
-            'certificate' => 'nullable|image|max:2048',
-            'photo' => 'nullable|image|max:2048',
         ]);
 
         $exam = Exam::findOrFail($validated['exam_id']);
@@ -203,6 +198,8 @@ class RegistrationController extends Controller
      */
     private function validateApplicantUniqueness(Request $request, array $validated, ?int $existingApplicantId): array
     {
+        $documentRule = $existingApplicantId ? 'nullable' : 'required';
+
         return $request->validate([
             'exam_id' => 'required|exists:exams,id',
             'name' => 'required|string|max:255',
@@ -222,10 +219,10 @@ class RegistrationController extends Controller
             'graduate_organization' => 'required|string',
             'graduate_year' => 'required|string',
             'speciality' => 'required|string',
-            'document_front' => 'nullable|image|max:2048',
-            'document_back' => 'nullable|image|max:2048',
-            'diplom' => 'nullable|image|max:2048',
-            'certificate' => 'nullable|image|max:2048',
+            'document_front' => "{$documentRule}|image|max:2048",
+            'document_back' => "{$documentRule}|image|max:2048",
+            'diplom' => "{$documentRule}|image|max:2048",
+            'certificate' => "{$documentRule}|image|max:2048",
             'photo' => 'nullable|image|max:2048',
         ]);
     }

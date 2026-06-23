@@ -196,10 +196,10 @@ class ExamAttemptController extends Controller
             ],
             'exam' => [
                 'name' => $attempt->exam->localizedName($attempt->exam->language),
-                'description' => $attempt->exam->description,
                 'duration_minutes' => $attempt->exam->duration_minutes,
                 'questions_count' => $attempt->exam->questions_count,
             ],
+            'exam_type_name' => $attempt->exam->examType->localizedName($attempt->exam->language),
             'applicant' => [
                 'name' => $attempt->applicant->name,
             ],
