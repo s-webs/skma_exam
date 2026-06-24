@@ -1,11 +1,11 @@
 <?php
 
 return [
-    'title' => 'Exam results sheet',
+    'title' => 'Extract from the Special Examination Record Sheet (Psychometric Testing)',
     'based_on' => 'ID :id dated :date',
     'full_name' => 'Full name',
     'exam_result' => 'Exam result',
-    'exam' => 'Exam',
+    'exam' => 'Language of examination',
     'exam_type_and_name' => 'Exam type / Exam',
     'correct_answers' => 'Correct answers',
     'total_score' => 'Total score',
