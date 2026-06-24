@@ -546,10 +546,10 @@
       "correctAnswers": "Дұрыс жауаптар",
       "timeMinutes": "{{count}} мин",
       "timeSeconds": "{{count}} сек",
-      "passingRequirement": "Өту үшін кемінде {{score}} дұрыс жауап қажет еді.",
+      "passingRequirement": "Сынақтан өту үшін кемінде {{score}} дұрыс жауап қажет болды.",
       "reportTelegram": "Толық PDF есеп Telegram-ға да жіберілді.",
-      "reportEmail": "Толық PDF есеп email-ге де жіберілді.",
-      "downloadPdf": "PDF есепті жүктеу"
+      "reportEmail": "Толық PDF-есеп электрондық поштаңызға да жіберілді.",
+      "downloadPdf": "PDF-есепті жүктеп алу"
     },
     "expired": {
       "pageTitle": "Уақыт аяқталды",
