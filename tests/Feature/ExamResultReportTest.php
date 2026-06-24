@@ -157,6 +157,26 @@ test('pdf html includes trilingual header and exam type row without entrance wor
     expect(substr_count($html, 'data:image/svg+xml;base64,'))->toBe(1);
 });
 
+test('pdf html shows localized exam type and exam names per locale block', function () {
+    $this->examType->update([
+        'name_ru' => 'Психотест RU',
+        'name_kk' => 'Психотест KK',
+        'name_en' => 'Psychotest EN',
+    ]);
+
+    $this->exam->update([
+        'name_ru' => 'Русский',
+        'name_kk' => 'Орысша',
+        'name_en' => 'Russian',
+    ]);
+
+    $html = view('pdf.exam-result-sheet', app(ExamResultPdfService::class)->buildViewData($this->attempt))->render();
+
+    expect($html)->toContain('Психотест RU / Русский')
+        ->and($html)->toContain('Психотест KK / Орысша')
+        ->and($html)->toContain('Psychotest EN / Russian');
+});
+
 test('finish sends telegram report with pdf', function () {
     $this->mock(TelegramService::class, function ($mock) {
         $mock->shouldReceive('sendExamResultsWithReport')
