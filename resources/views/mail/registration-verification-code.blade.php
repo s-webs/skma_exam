@@ -1,14 +1,13 @@
 <x-mail::message>
-# Подтверждение регистрации
+# {{ __('mail.verification.title') }}
 
-Ваш код подтверждения:
+{{ __('mail.verification.code_intro') }}
 
 <x-mail::panel>
 **{{ $code }}**
 </x-mail::panel>
 
-Код действителен 10 минут. Если вы не запрашивали регистрацию, проигнорируйте это письмо.
+{{ __('mail.verification.expiry') }}
 
-С уважением,<br>
 {{ config('app.name') }}
 </x-mail::message>

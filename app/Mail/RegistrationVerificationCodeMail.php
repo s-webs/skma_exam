@@ -22,7 +22,7 @@ class RegistrationVerificationCodeMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Код подтверждения регистрации',
+            subject: __('mail.verification.subject'),
         );
     }
 

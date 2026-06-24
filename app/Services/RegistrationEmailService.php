@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Applicant;
+use App\Models\Exam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
@@ -82,7 +83,7 @@ class RegistrationEmailService
             'verified' => false,
         ], now()->addHours(2));
 
-        $codeSent = $this->sendCode($personal['email'], $code);
+        $codeSent = $this->sendCode($personal['email'], $code, $this->examLanguage($examId));
 
         return ['token' => $token, 'code_sent' => $codeSent];
     }
@@ -118,7 +119,7 @@ class RegistrationEmailService
             'verified' => false,
         ], now()->addHours(2));
 
-        $codeSent = $this->sendCode($personal['email'], $code);
+        $codeSent = $this->sendCode($personal['email'], $code, $this->examLanguage($examId));
 
         return ['token' => $token, 'code_sent' => $codeSent];
     }
@@ -218,17 +219,32 @@ class RegistrationEmailService
         $draft['verified'] = false;
         Cache::put($this->cacheKey($token), $draft, now()->addHours(2));
 
-        return $this->sendCode($email, $draft['code']);
+        return $this->sendCode($email, $draft['code'], $this->examLanguage((string) $draft['exam_id']));
     }
 
-    public function sendCode(string $email, string $code): bool
+    public function sendCode(string $email, string $code, string $examLanguage): bool
     {
         try {
-            Mail::to($email)->queue(new RegistrationVerificationCodeMail($code));
+            Mail::to($email)
+                ->locale($this->normalizeExamLocale($examLanguage))
+                ->queue(new RegistrationVerificationCodeMail($code));
 
             return true;
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    private function examLanguage(string $examId): string
+    {
+        return Exam::query()->findOrFail($examId)->language;
+    }
+
+    private function normalizeExamLocale(string $locale): string
+    {
+        return match ($locale) {
+            'kz' => 'kk',
+            default => $locale,
+        };
     }
 }

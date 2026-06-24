@@ -255,3 +255,168 @@ test('approve without telegram sends exam invite email', function () {
 
     expect($registration->fresh()->approved)->toBeTrue();
 });
+
+function createLocalizedExam(object $context, string $language): Exam
+{
+    return Exam::create([
+        'exam_type_id' => $context->examType->id,
+        'name_ru' => 'Экзамен RU',
+        'name_en' => 'Exam EN',
+        'name_kk' => 'Емтихан KK',
+        'description' => null,
+        'language' => $language,
+        'duration_minutes' => 45,
+        'questions_count' => 2,
+        'passing_score' => 1,
+        'max_attempts' => 1,
+        'is_active' => true,
+        'require_telegram_verification' => false,
+        'created_by_user_id' => $context->admin->id,
+    ]);
+}
+
+function seedExamQuestions(Exam $exam, User $admin): void
+{
+    foreach (range(1, 2) as $i) {
+        $question = \App\Models\Question::create([
+            'exam_id' => $exam->id,
+            'content' => "Question {$i}",
+            'is_active' => true,
+            'created_by_user_id' => $admin->id,
+        ]);
+
+        \App\Models\Answer::create([
+            'question_id' => $question->id,
+            'content' => 'Wrong',
+            'is_correct' => false,
+            'created_by_user_id' => $admin->id,
+        ]);
+
+        \App\Models\Answer::create([
+            'question_id' => $question->id,
+            'content' => 'Correct',
+            'is_correct' => true,
+            'created_by_user_id' => $admin->id,
+        ]);
+    }
+}
+
+test('email init sends verification code localized for english exam', function () {
+    $exam = createLocalizedExam($this, 'en');
+
+    $response = $this->postJson(route('public.registration.email.init', $this->examType->slug), [
+        'exam_id' => $exam->id,
+        'name' => 'English Applicant',
+        'email' => 'en@example.com',
+        'identifier' => '666666666666',
+        'address' => 'Address',
+        'phone' => '77001112233',
+    ]);
+
+    $response->assertOk();
+
+    Mail::assertQueued(RegistrationVerificationCodeMail::class, function ($mail) {
+        expect($mail->locale)->toBe('en');
+        app()->setLocale('en');
+
+        return $mail->hasTo('en@example.com')
+            && $mail->envelope()->subject === __('mail.verification.subject');
+    });
+});
+
+test('email init sends verification code localized for kazakh exam', function () {
+    $exam = createLocalizedExam($this, 'kz');
+
+    $response = $this->postJson(route('public.registration.email.init', $this->examType->slug), [
+        'exam_id' => $exam->id,
+        'name' => 'Kazakh Applicant',
+        'email' => 'kz@example.com',
+        'identifier' => '777777777777',
+        'address' => 'Address',
+        'phone' => '77001112233',
+    ]);
+
+    $response->assertOk();
+
+    Mail::assertQueued(RegistrationVerificationCodeMail::class, function ($mail) {
+        expect($mail->locale)->toBe('kk');
+        app()->setLocale('kk');
+
+        return $mail->hasTo('kz@example.com')
+            && $mail->envelope()->subject === __('mail.verification.subject');
+    });
+});
+
+test('approve sends exam invite email localized for english exam', function () {
+    $exam = createLocalizedExam($this, 'en');
+    seedExamQuestions($exam, $this->admin);
+
+    $applicant = Applicant::create([
+        'name' => 'English Applicant',
+        'email' => 'invite-en@example.com',
+        'identifier' => '888888888888',
+        'address' => 'Address',
+        'phone' => '77001112233',
+        'graduate_organization' => 'Org',
+        'graduate_year' => '2020',
+        'speciality' => 'Spec',
+        'language' => 'en',
+        'verified' => true,
+        'telegram_chat_id' => null,
+    ]);
+
+    $registration = ExamRegistration::create([
+        'applicant_id' => $applicant->id,
+        'exam_id' => $exam->id,
+        'approved' => false,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $registration))
+        ->assertRedirect();
+
+    Mail::assertQueued(ExamInviteMail::class, function ($mail) use ($applicant) {
+        expect($mail->locale)->toBe('en');
+        app()->setLocale('en');
+
+        return $mail->hasTo($applicant->email)
+            && $mail->envelope()->subject === __('mail.exam_invite.subject');
+    });
+});
+
+test('approve sends exam invite email localized for kazakh exam', function () {
+    $exam = createLocalizedExam($this, 'kz');
+    seedExamQuestions($exam, $this->admin);
+
+    $applicant = Applicant::create([
+        'name' => 'Kazakh Applicant',
+        'email' => 'invite-kz@example.com',
+        'identifier' => '999999999999',
+        'address' => 'Address',
+        'phone' => '77001112233',
+        'graduate_organization' => 'Org',
+        'graduate_year' => '2020',
+        'speciality' => 'Spec',
+        'language' => 'kz',
+        'verified' => true,
+        'telegram_chat_id' => null,
+    ]);
+
+    $registration = ExamRegistration::create([
+        'applicant_id' => $applicant->id,
+        'exam_id' => $exam->id,
+        'approved' => false,
+    ]);
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $registration))
+        ->assertRedirect();
+
+    Mail::assertQueued(ExamInviteMail::class, function ($mail) use ($applicant) {
+        expect($mail->locale)->toBe('kk');
+        app()->setLocale('kk');
+
+        return $mail->hasTo($applicant->email)
+            && $mail->envelope()->subject === __('mail.exam_invite.subject');
+    });
+});

@@ -1,16 +1,15 @@
 <x-mail::message>
-# Запись на экзамен одобрена
+# {{ __('mail.exam_invite.title') }}
 
-**Экзамен:** {{ $examName }}
+**{{ __('mail.exam_invite.exam') }}:** {{ $examName }}
 
-**Время на прохождение:** {{ $durationMinutes }} мин.
+**{{ __('mail.exam_invite.duration', ['minutes' => $durationMinutes]) }}**
 
 <x-mail::button :url="$examUrl">
-Перейти к экзамену
+{{ __('mail.exam_invite.button') }}
 </x-mail::button>
 
-Ссылка действительна до начала экзамена. Не передавайте её третьим лицам.
+{{ __('mail.exam_invite.link_hint') }}
 
-С уважением,<br>
 {{ config('app.name') }}
 </x-mail::message>

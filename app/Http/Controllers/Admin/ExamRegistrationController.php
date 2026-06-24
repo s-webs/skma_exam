@@ -274,12 +274,22 @@ class ExamRegistrationController extends Controller
                     );
                 }
             } else {
-                Mail::to($applicant->email)->queue(new ExamInviteMail(
-                    $exam->localizedName($exam->language),
-                    $examUrl,
-                    $exam->duration_minutes
-                ));
+                Mail::to($applicant->email)
+                    ->locale($this->normalizeExamLocale($exam->language))
+                    ->queue(new ExamInviteMail(
+                        $exam->localizedName($exam->language),
+                        $examUrl,
+                        $exam->duration_minutes
+                    ));
             }
         });
+    }
+
+    private function normalizeExamLocale(string $locale): string
+    {
+        return match ($locale) {
+            'kz' => 'kk',
+            default => $locale,
+        };
     }
 }

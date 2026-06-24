@@ -24,7 +24,7 @@ class ExamInviteMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Запись на экзамен одобрена',
+            subject: __('mail.exam_invite.subject'),
         );
     }
 
