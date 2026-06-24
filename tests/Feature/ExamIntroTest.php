@@ -100,8 +100,49 @@ test('exam intro shows localized exam type name for selected exam language', fun
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Public/Exam/Intro')
+            ->where('locale', 'ru')
             ->where('exam_type_name', $this->examType->localizedName($this->exam->language))
             ->where('exam.name', $this->exam->localizedName($this->exam->language))
             ->missing('exam.description')
+        );
+});
+
+test('exam intro passes normalized locale for kazakh exam', function () {
+    $this->exam->update(['language' => 'kz']);
+
+    $this->mock(TelegramService::class, function ($mock) {
+        $mock->shouldReceive('sendExamInvite')->once()->andReturn(true);
+    });
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $this->registration));
+
+    $attempt = ExamAttempt::firstOrFail();
+
+    $this->get(route('public.exam.show', $attempt->token))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Public/Exam/Intro')
+            ->where('locale', 'kk')
+        );
+});
+
+test('exam intro passes locale for english exam', function () {
+    $this->exam->update(['language' => 'en']);
+
+    $this->mock(TelegramService::class, function ($mock) {
+        $mock->shouldReceive('sendExamInvite')->once()->andReturn(true);
+    });
+
+    $this->actingAs($this->admin)
+        ->post(route('admin.exam-registrations.approve', $this->registration));
+
+    $attempt = ExamAttempt::firstOrFail();
+
+    $this->get(route('public.exam.show', $attempt->token))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Public/Exam/Intro')
+            ->where('locale', 'en')
         );
 });

@@ -516,5 +516,48 @@
       "watchEmail": " {{email}} поштасын қадағалаңыз.",
       "backHome": "Басты бетке оралу"
     }
+  },
+  "publicExam": {
+    "common": {
+      "genericError": "Қате орын алды"
+    },
+    "intro": {
+      "pageTitle": "Емтихан — {{name}}",
+      "questions_one": "{{count}} сұрақ",
+      "questions_other": "{{count}} сұрақ",
+      "duration": "{{count}} мин. тапсыру үшін",
+      "timerWarning": "«Емтиханды бастау» батырмасын басқаннан кейін таймер іске қосылады. Интернет байланысының тұрақты екеніне және уақытыңыздың жеткілікті екеніне көз жеткізіңіз.",
+      "startButton": "Емтиханды бастау"
+    },
+    "take": {
+      "pageTitle": "Емтихан — {{name}}",
+      "answered": "Жауап берілді: {{count}}",
+      "saving": "Сақталуда…",
+      "back": "Артқа",
+      "next": "Келесі",
+      "finish": "Аяқтау",
+      "finishError": "Аяқтау қатесі"
+    },
+    "complete": {
+      "pageTitle": "Нәтиже — {{name}}",
+      "passed": "Емтихан тапсырылды",
+      "failed": "Емтихан тапсырылмады",
+      "result": "Нәтиже",
+      "correctAnswers": "Дұрыс жауаптар",
+      "timeMinutes": "{{count}} мин",
+      "timeSeconds": "{{count}} сек",
+      "passingRequirement": "Өту үшін кемінде {{score}} дұрыс жауап қажет еді.",
+      "reportTelegram": "Толық PDF есеп Telegram-ға да жіберілді.",
+      "reportEmail": "Толық PDF есеп email-ге де жіберілді.",
+      "downloadPdf": "PDF есепті жүктеу"
+    },
+    "expired": {
+      "pageTitle": "Уақыт аяқталды",
+      "title": "Емтихан уақыты аяқталды",
+      "description": "Берілген уақыт аяқталды. Емтиханды аяқтамаған болсаңыз, әкімшіге хабарласыңыз."
+    },
+    "question": {
+      "label": "Сұрақ {{order}}"
+    }
   }
 }

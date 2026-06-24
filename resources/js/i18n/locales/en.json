@@ -516,5 +516,48 @@
       "watchEmail": " Watch for emails at {{email}}.",
       "backHome": "Back to home"
     }
+  },
+  "publicExam": {
+    "common": {
+      "genericError": "An error occurred"
+    },
+    "intro": {
+      "pageTitle": "Exam — {{name}}",
+      "questions_one": "{{count}} question",
+      "questions_other": "{{count}} questions",
+      "duration": "{{count}} min allowed",
+      "timerWarning": "After you click \"Start exam\", the timer will begin. Make sure you have a stable internet connection and enough time.",
+      "startButton": "Start exam"
+    },
+    "take": {
+      "pageTitle": "Exam — {{name}}",
+      "answered": "Answered: {{count}}",
+      "saving": "Saving…",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "finishError": "Failed to finish"
+    },
+    "complete": {
+      "pageTitle": "Result — {{name}}",
+      "passed": "Exam passed",
+      "failed": "Exam not passed",
+      "result": "Result",
+      "correctAnswers": "Correct answers",
+      "timeMinutes": "{{count}} min",
+      "timeSeconds": "{{count}} sec",
+      "passingRequirement": "At least {{score}} correct answers were required to pass.",
+      "reportTelegram": "A detailed PDF report has also been sent to Telegram.",
+      "reportEmail": "A detailed PDF report has also been sent to your email.",
+      "downloadPdf": "Download PDF report"
+    },
+    "expired": {
+      "pageTitle": "Time expired",
+      "title": "Exam time has expired",
+      "description": "The allotted time has ended. If you did not finish the exam, contact the administrator."
+    },
+    "question": {
+      "label": "Question {{order}}"
+    }
   }
 }

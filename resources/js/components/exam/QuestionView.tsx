@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { AnswerOption } from '@/components/exam/AnswerOption';
 
 export interface ExamAnswer {
@@ -21,11 +22,13 @@ interface QuestionViewProps {
 }
 
 export function QuestionView({ question, selectedAnswerId, onSelectAnswer }: QuestionViewProps) {
+    const { t } = useTranslation();
+
     return (
         <div className="space-y-4">
             <div className="rounded-xl bg-white p-4 shadow-sm">
                 <p className="text-xs font-medium uppercase tracking-wide text-indigo-600">
-                    Вопрос {question.order}
+                    {t('publicExam.question.label', { order: question.order })}
                 </p>
                 {question.image_url && (
                     <img

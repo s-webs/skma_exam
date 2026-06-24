@@ -516,5 +516,50 @@
       "watchEmail": " Следите за письмами на {{email}}.",
       "backHome": "Вернуться на главную"
     }
+  },
+  "publicExam": {
+    "common": {
+      "genericError": "Произошла ошибка"
+    },
+    "intro": {
+      "pageTitle": "Экзамен — {{name}}",
+      "questions_one": "{{count}} вопрос",
+      "questions_few": "{{count}} вопроса",
+      "questions_many": "{{count}} вопросов",
+      "questions_other": "{{count}} вопросов",
+      "duration": "{{count}} мин. на прохождение",
+      "timerWarning": "После нажатия «Начать экзамен» запустится таймер. Убедитесь, что у вас стабильное интернет-соединение и достаточно времени.",
+      "startButton": "Начать экзамен"
+    },
+    "take": {
+      "pageTitle": "Экзамен — {{name}}",
+      "answered": "Отвечено: {{count}}",
+      "saving": "Сохранение…",
+      "back": "Назад",
+      "next": "Далее",
+      "finish": "Завершить",
+      "finishError": "Ошибка завершения"
+    },
+    "complete": {
+      "pageTitle": "Результат — {{name}}",
+      "passed": "Экзамен сдан",
+      "failed": "Экзамен не сдан",
+      "result": "Результат",
+      "correctAnswers": "Верных ответов",
+      "timeMinutes": "{{count}} мин",
+      "timeSeconds": "{{count}} сек",
+      "passingRequirement": "Для зачёта требовалось не менее {{score}} верных ответов.",
+      "reportTelegram": "Подробный PDF-отчёт также отправлен в Telegram.",
+      "reportEmail": "Подробный PDF-отчёт также отправлен на email.",
+      "downloadPdf": "Скачать PDF-отчёт"
+    },
+    "expired": {
+      "pageTitle": "Время истекло",
+      "title": "Время экзамена истекло",
+      "description": "Отведённое время на прохождение закончилось. Если вы не завершили экзамен, обратитесь к администратору."
+    },
+    "question": {
+      "label": "Вопрос {{order}}"
+    }
   }
 }

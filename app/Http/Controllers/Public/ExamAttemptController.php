@@ -71,6 +71,7 @@ class ExamAttemptController extends Controller
         }
 
         return Inertia::render('Public/Exam/Take', [
+            'locale' => $this->examLocale($attempt),
             'attempt' => [
                 'token' => $attempt->token,
                 'expires_at' => $attempt->expires_at?->toIso8601String(),
@@ -168,6 +169,7 @@ class ExamAttemptController extends Controller
         $result = $attempt->result;
 
         return Inertia::render('Public/Exam/Complete', [
+            'locale' => $this->examLocale($attempt),
             'exam' => [
                 'name' => $attempt->exam->localizedName($attempt->exam->language),
             ],
@@ -190,6 +192,7 @@ class ExamAttemptController extends Controller
     private function introPayload(ExamAttempt $attempt): array
     {
         return [
+            'locale' => $this->examLocale($attempt),
             'attempt' => [
                 'token' => $attempt->token,
                 'status' => $attempt->status,
@@ -212,6 +215,7 @@ class ExamAttemptController extends Controller
     private function expiredPayload(ExamAttempt $attempt): array
     {
         return [
+            'locale' => $this->examLocale($attempt),
             'exam' => [
                 'name' => $attempt->exam->localizedName($attempt->exam->language),
             ],
@@ -219,6 +223,11 @@ class ExamAttemptController extends Controller
                 'token' => $attempt->token,
             ],
         ];
+    }
+
+    private function examLocale(ExamAttempt $attempt): string
+    {
+        return $this->normalizeExamLocale($attempt->exam->language);
     }
 
     private function normalizeExamLocale(string $locale): string

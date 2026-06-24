@@ -1,9 +1,12 @@
 import { Head } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useExamLocale } from '@/hooks/use-exam-locale';
 
 interface CompleteProps {
+    locale: string;
     reportUrl: string;
     resultsDeliveryMethod: 'telegram' | 'email';
     exam: { name: string };
@@ -17,16 +20,19 @@ interface CompleteProps {
     };
 }
 
-function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m} мин ${s} сек`;
-}
+export default function Complete({ locale, reportUrl, resultsDeliveryMethod, exam, result }: CompleteProps) {
+    const { t } = useTranslation();
+    useExamLocale(locale);
 
-export default function Complete({ reportUrl, resultsDeliveryMethod, exam, result }: CompleteProps) {
+    const formatTime = (seconds: number): string => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${t('publicExam.complete.timeMinutes', { count: m })} ${t('publicExam.complete.timeSeconds', { count: s })}`;
+    };
+
     return (
         <>
-            <Head title={`Результат — ${exam.name}`} />
+            <Head title={t('publicExam.complete.pageTitle', { name: exam.name })} />
 
             <div className="min-h-dvh bg-gradient-to-br from-indigo-50 via-white to-blue-50 px-4 py-8 pb-safe">
                 <div className="mx-auto max-w-lg">
@@ -44,7 +50,7 @@ export default function Complete({ reportUrl, resultsDeliveryMethod, exam, resul
                                 )}
                             </div>
                             <CardTitle className="text-xl">
-                                {result.passed ? 'Экзамен сдан' : 'Экзамен не сдан'}
+                                {result.passed ? t('publicExam.complete.passed') : t('publicExam.complete.failed')}
                             </CardTitle>
                             <CardDescription>{exam.name}</CardDescription>
                         </CardHeader>
@@ -52,13 +58,13 @@ export default function Complete({ reportUrl, resultsDeliveryMethod, exam, resul
                             <div className="grid grid-cols-2 gap-3 text-center">
                                 <div className="rounded-xl bg-gray-50 p-4">
                                     <p className="text-2xl font-bold text-indigo-600">{result.total_score}%</p>
-                                    <p className="text-xs text-gray-600">Результат</p>
+                                    <p className="text-xs text-gray-600">{t('publicExam.complete.result')}</p>
                                 </div>
                                 <div className="rounded-xl bg-gray-50 p-4">
                                     <p className="text-2xl font-bold text-gray-900">
                                         {result.correct_answers}/{result.total_questions}
                                     </p>
-                                    <p className="text-xs text-gray-600">Верных ответов</p>
+                                    <p className="text-xs text-gray-600">{t('publicExam.complete.correctAnswers')}</p>
                                 </div>
                             </div>
 
@@ -68,19 +74,19 @@ export default function Complete({ reportUrl, resultsDeliveryMethod, exam, resul
                             </div>
 
                             <p className="text-center text-sm text-muted-foreground">
-                                Для зачёта требовалось не менее {result.passing_score} верных ответов.
+                                {t('publicExam.complete.passingRequirement', { score: result.passing_score })}
                             </p>
 
                             <p className="text-center text-sm text-muted-foreground">
                                 {resultsDeliveryMethod === 'telegram'
-                                    ? 'Подробный PDF-отчёт также отправлен в Telegram.'
-                                    : 'Подробный PDF-отчёт также отправлен на email.'}
+                                    ? t('publicExam.complete.reportTelegram')
+                                    : t('publicExam.complete.reportEmail')}
                             </p>
 
                             <Button asChild className="h-12 w-full" size="lg">
                                 <a href={reportUrl} target="_blank" rel="noopener noreferrer">
                                     <FileDown className="mr-2 h-4 w-4" />
-                                    Скачать PDF-отчёт
+                                    {t('publicExam.complete.downloadPdf')}
                                 </a>
                             </Button>
                         </CardContent>

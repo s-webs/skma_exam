@@ -1,12 +1,15 @@
 import { Head, router } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { ExamTimer } from '@/components/exam/ExamTimer';
 import { ExamQuestion, QuestionView } from '@/components/exam/QuestionView';
 import { Button } from '@/components/ui/button';
 import { examJson } from '@/lib/exam-api';
+import { useExamLocale } from '@/hooks/use-exam-locale';
 
 interface TakeProps {
+    locale: string;
     attempt: {
         token: string;
         expires_at: string;
@@ -17,7 +20,10 @@ interface TakeProps {
     savedAnswers: Record<string, number>;
 }
 
-export default function Take({ attempt, exam, questions, savedAnswers }: TakeProps) {
+export default function Take({ locale, attempt, exam, questions, savedAnswers }: TakeProps) {
+    const { t } = useTranslation();
+    useExamLocale(locale);
+
     const initialAnswers: Record<number, number> = {};
     for (const [qId, aId] of Object.entries(savedAnswers)) {
         initialAnswers[Number(qId)] = aId;
@@ -53,8 +59,8 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
 
         finishCalledRef.current = false;
         setFinishing(false);
-        alert(result.ok ? 'Ошибка завершения' : result.message);
-    }, [attempt.token]);
+        alert(result.ok ? t('publicExam.take.finishError') : result.message);
+    }, [attempt.token, t]);
 
     useEffect(() => {
         const warn = (e: BeforeUnloadEvent) => {
@@ -92,7 +98,7 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
 
     return (
         <>
-            <Head title={`Экзамен — ${exam.name}`} />
+            <Head title={t('publicExam.take.pageTitle', { name: exam.name })} />
 
             <div className="flex min-h-dvh flex-col bg-gradient-to-br from-indigo-50 via-white to-blue-50">
                 <header className="sticky top-0 z-10 border-b border-indigo-100 bg-indigo-50/95 px-4 py-3 backdrop-blur">
@@ -105,7 +111,7 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
                             <span>
                                 {currentIndex + 1} / {total}
                             </span>
-                            <span>Отвечено: {answeredCount}</span>
+                            <span>{t('publicExam.take.answered', { count: answeredCount })}</span>
                         </div>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white">
                             <div
@@ -128,7 +134,7 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
                         {saving && (
                             <p className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                Сохранение…
+                                {t('publicExam.take.saving')}
                             </p>
                         )}
                     </div>
@@ -144,7 +150,7 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
                             disabled={currentIndex === 0 || finishing}
                         >
                             <ChevronLeft className="mr-1 h-4 w-4" />
-                            Назад
+                            {t('publicExam.take.back')}
                         </Button>
 
                         {isLast ? (
@@ -157,7 +163,7 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
                                 {finishing ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
-                                    'Завершить'
+                                    t('publicExam.take.finish')
                                 )}
                             </Button>
                         ) : (
@@ -167,7 +173,7 @@ export default function Take({ attempt, exam, questions, savedAnswers }: TakePro
                                 onClick={goNext}
                                 disabled={!selectedId || finishing}
                             >
-                                Далее
+                                {t('publicExam.take.next')}
                                 <ChevronRight className="ml-1 h-4 w-4" />
                             </Button>
                         )}

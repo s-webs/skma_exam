@@ -1,3 +1,5 @@
+import i18n from '@/i18n/config';
+
 function getCsrfToken(): string {
     const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
     return match ? decodeURIComponent(match[1]) : '';
@@ -23,7 +25,7 @@ export async function examJson<T>(
     if (!response.ok) {
         return {
             ok: false,
-            message: (body as { message?: string }).message ?? 'Произошла ошибка',
+            message: (body as { message?: string }).message ?? i18n.t('publicExam.common.genericError'),
         };
     }
 
