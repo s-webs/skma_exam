@@ -86,6 +86,8 @@ class ExamRegistrationRows
         array $repeatRegistrationIds,
     ): array {
         $applicant = $registration->applicant;
+        $result = self::attemptResult($attempt);
+        $reportUrl = self::attemptReportUrl($attempt);
 
         return [
             'attempt_id' => $attempt?->id,
@@ -101,6 +103,8 @@ class ExamRegistrationRows
                 ]
                 : null,
             'is_repeat_registration' => isset($repeatRegistrationIds[$registration->id]),
+            'result' => $result,
+            'report_url' => $reportUrl,
             'applicant' => $applicant
                 ? [
                     'id' => $applicant->id,
@@ -115,5 +119,31 @@ class ExamRegistrationRows
                 ]
                 : null,
         ];
+    }
+
+    /**
+     * @return array{passed: bool, total_score: int, correct_answers: int, total_questions: int}|null
+     */
+    private static function attemptResult(?ExamAttempt $attempt): ?array
+    {
+        if ($attempt?->status !== 'completed' || ! $attempt->result) {
+            return null;
+        }
+
+        return [
+            'passed' => $attempt->result->passed,
+            'total_score' => $attempt->result->total_score,
+            'correct_answers' => $attempt->result->correct_answers,
+            'total_questions' => $attempt->result->total_questions,
+        ];
+    }
+
+    private static function attemptReportUrl(?ExamAttempt $attempt): ?string
+    {
+        if ($attempt?->status !== 'completed' || ! $attempt->result) {
+            return null;
+        }
+
+        return route('public.exam.report', $attempt->token);
     }
 }

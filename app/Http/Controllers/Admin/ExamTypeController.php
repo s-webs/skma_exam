@@ -150,21 +150,32 @@ class ExamTypeController extends Controller
             ->with('success', 'Тип экзамена успешно удален');
     }
 
-    public function applicants(ExamType $examType)
+    public function applicants(Request $request, ExamType $examType)
     {
         $this->authorization->ensureCan(auth()->user(), 'exam-types.view', $examType);
 
         $examIds = $examType->exams()->pluck('id');
+        $identifier = preg_replace('/\D+/', '', (string) $request->query('identifier', '')) ?? '';
 
-        $registrations = ExamRegistration::whereIn('exam_id', $examIds)
+        $registrationsQuery = ExamRegistration::whereIn('exam_id', $examIds)
             ->with([
                 'applicant',
                 'exam:id,name_ru,name_kk,name_en,language',
                 'approvedByUser:id,name',
-                'examAttempts' => fn ($query) => $query->latest('id'),
-            ])
+                'examAttempts' => fn ($query) => $query->latest('id')->with('result'),
+            ]);
+
+        if ($identifier !== '') {
+            $registrationsQuery->whereHas(
+                'applicant',
+                fn ($query) => $query->where('identifier', 'like', '%'.$identifier.'%'),
+            );
+        }
+
+        $registrations = $registrationsQuery
             ->latest()
-            ->paginate(30);
+            ->paginate(30)
+            ->withQueryString();
 
         $examType->load(['exams' => function ($query) {
             $query->select('id', 'exam_type_id', 'name_ru', 'name_kk', 'name_en', 'language');
@@ -174,6 +185,9 @@ class ExamTypeController extends Controller
             'examType' => $examType,
             'registrations' => $registrations,
             'rows' => ExamRegistrationRows::flatten($registrations->items()),
+            'filters' => [
+                'identifier' => $request->string('identifier')->toString(),
+            ],
         ]);
     }
 }

@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, Calendar, CheckCircle, XCircle, Eye, Trash2, FileX } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle, XCircle, Eye, Trash2, FileX, FileDown, Search } from 'lucide-react';
 import { router } from '@inertiajs/react';
+import { FormEvent, useState } from 'react';
 import { useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,13 @@ interface ApplicantRow {
     identifier: string;
 }
 
+interface ExamResultSummary {
+    passed: boolean;
+    total_score: number;
+    correct_answers: number;
+    total_questions: number;
+}
+
 interface ExamRegistrationRow {
     attempt_id: number | null;
     registration_id: number;
@@ -50,6 +58,8 @@ interface ExamRegistrationRow {
         name: string;
     } | null;
     is_repeat_registration: boolean;
+    result: ExamResultSummary | null;
+    report_url: string | null;
     applicant: ApplicantRow | null;
     exam: Exam | null;
 }
@@ -73,9 +83,12 @@ interface ApplicantsProps {
     examType: ExamType;
     registrations: PaginatedRegistrations;
     rows: ExamRegistrationRow[];
+    filters: {
+        identifier: string;
+    };
 }
 
-export default function Applicants({ examType, registrations, rows }: ApplicantsProps) {
+export default function Applicants({ examType, registrations, rows, filters }: ApplicantsProps) {
     const { t } = useTranslation();
     const { errors, flash } = usePage<{
         errors: { approve?: string; date?: string };
@@ -99,6 +112,22 @@ export default function Applicants({ examType, registrations, rows }: Applicants
         clearSelection,
     } = useBulkApproval(rows);
     const { bulkUpdateDate } = useBulkDateChange(selected, clearSelection);
+    const [identifierSearch, setIdentifierSearch] = useState(filters.identifier);
+
+    const handleIdentifierSearch = (event: FormEvent) => {
+        event.preventDefault();
+
+        router.get(
+            route('admin.exam-types.applicants', examType.id),
+            { identifier: identifierSearch },
+            { preserveState: true, replace: true },
+        );
+    };
+
+    const clearIdentifierSearch = () => {
+        setIdentifierSearch('');
+        router.get(route('admin.exam-types.applicants', examType.id), {}, { preserveState: true, replace: true });
+    };
 
     const checkableIds = useMemo(() => {
         const ids = new Set<number>();
@@ -265,6 +294,34 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                             </div>
                         </CardHeader>
                         <CardContent>
+                            <form
+                                onSubmit={handleIdentifierSearch}
+                                className="mb-4 flex flex-wrap items-end gap-2"
+                            >
+                                <div className="min-w-[220px] flex-1 space-y-1">
+                                    <label htmlFor="identifier-search" className="text-sm font-medium">
+                                        Поиск по ИИН
+                                    </label>
+                                    <Input
+                                        id="identifier-search"
+                                        value={identifierSearch}
+                                        onChange={(event) => setIdentifierSearch(event.target.value)}
+                                        placeholder="Введите ИИН"
+                                        inputMode="numeric"
+                                        className="font-mono"
+                                    />
+                                </div>
+                                <Button type="submit" variant="outline">
+                                    <Search className="mr-2 h-4 w-4" />
+                                    Найти
+                                </Button>
+                                {filters.identifier && (
+                                    <Button type="button" variant="ghost" onClick={clearIdentifierSearch}>
+                                        Сбросить
+                                    </Button>
+                                )}
+                            </form>
+
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -283,13 +340,14 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                                         <TableHead>Экзамен</TableHead>
                                         <TableHead>Дата</TableHead>
                                         <TableHead>Одобрение</TableHead>
+                                        <TableHead>Результат</TableHead>
                                         <TableHead className="text-right">Действия</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {rows.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={showCheckboxColumn && checkableIds.length > 0 ? 8 : 7} className="text-center text-muted-foreground">
+                                            <TableCell colSpan={showCheckboxColumn && checkableIds.length > 0 ? 9 : 8} className="text-center text-muted-foreground">
                                                 Нет зарегистрированных записей
                                             </TableCell>
                                         </TableRow>
@@ -302,7 +360,10 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                                             }
 
                                             return (
-                                                <TableRow key={rowKey(row)}>
+                                                <TableRow
+                                                    key={rowKey(row)}
+                                                    className={row.result ? 'bg-lime-50 hover:bg-lime-50' : undefined}
+                                                >
                                                     {showCheckboxColumn && checkableIds.length > 0 && (
                                                         <TableCell>
                                                             {rowIsCheckable(row) ? (
@@ -362,6 +423,34 @@ export default function Applicants({ examType, registrations, rows }: Applicants
                                                             <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
                                                                 Не одобрен
                                                             </span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {row.result ? (
+                                                            <div className="flex flex-col gap-2">
+                                                                {row.result.passed ? (
+                                                                    <span className="w-fit rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                                                                        Сдан ({row.result.total_score}%)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="w-fit rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                                                                        Не сдан ({row.result.total_score}%)
+                                                                    </span>
+                                                                )}
+                                                                {row.report_url && (
+                                                                    <a
+                                                                        href={row.report_url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex w-fit items-center gap-1 text-xs font-medium text-indigo-700 hover:underline"
+                                                                    >
+                                                                        <FileDown className="h-3.5 w-3.5" />
+                                                                        PDF-ведомость
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            '—'
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-right">
